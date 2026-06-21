@@ -1,9 +1,35 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  Wrench, Disc, Cog, Zap, Car, Filter, Lightbulb, Gauge, Sparkles,
+  Wind, Droplets, CircleDot, Settings, Package,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
+import heroCar1 from "@/assets/hero-car-1.jpg";
+import heroCar2 from "@/assets/hero-car-2.jpg";
+import heroCar3 from "@/assets/hero-car-3.jpg";
+
+const HERO_SLIDES = [heroCar1, heroCar2, heroCar3];
+
+function iconForCategory(name: string) {
+  const n = name.toLowerCase();
+  if (n.includes("brake")) return Disc;
+  if (n.includes("shock") || n.includes("suspension")) return Cog;
+  if (n.includes("electric") || n.includes("battery")) return Zap;
+  if (n.includes("body") || n.includes("exterior")) return Car;
+  if (n.includes("filter")) return Filter;
+  if (n.includes("light") || n.includes("lamp") || n.includes("head")) return Lightbulb;
+  if (n.includes("engine")) return Gauge;
+  if (n.includes("interior") || n.includes("cabin")) return Sparkles;
+  if (n.includes("ac") || n.includes("air")) return Wind;
+  if (n.includes("oil") || n.includes("fluid")) return Droplets;
+  if (n.includes("tyre") || n.includes("tire") || n.includes("wheel")) return CircleDot;
+  if (n.includes("maruti") || n.includes("part")) return Settings;
+  return Package;
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -37,6 +63,12 @@ type Accessory = {
 
 function Index() {
   const [activeCat, setActiveCat] = useState<string | "all">("all");
+  const [slide, setSlide] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setSlide((s) => (s + 1) % HERO_SLIDES.length), 4000);
+    return () => clearInterval(t);
+  }, []);
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
@@ -73,14 +105,47 @@ function Index() {
     <div className="min-h-screen bg-background text-foreground">
       <Header />
 
-      <main className="mx-auto max-w-5xl px-5 pb-10 pt-8">
-        <section>
-          <h1 className="text-2xl font-bold tracking-tight text-primary">
-            Genuine parts, right fit.
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Maruti Suzuki accessories curated by AS Automobiles, Srinagar.
-          </p>
+      <main className="mx-auto max-w-5xl px-5 pb-10 pt-5">
+        {/* Hero carousel */}
+        <section className="relative overflow-hidden rounded-2xl bg-primary">
+          <div className="relative aspect-[16/10] w-full sm:aspect-[21/9]">
+            {HERO_SLIDES.map((src, i) => (
+              <img
+                key={src}
+                src={src}
+                alt="Maruti Suzuki car"
+                width={1280}
+                height={720}
+                className={
+                  "absolute inset-0 h-full w-full object-cover transition-opacity duration-700 " +
+                  (i === slide ? "opacity-100" : "opacity-0")
+                }
+                loading={i === 0 ? "eager" : "lazy"}
+              />
+            ))}
+            <div className="absolute inset-0 bg-gradient-to-t from-primary/85 via-primary/30 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
+                AS Automobiles · Srinagar
+              </p>
+              <h1 className="mt-1 text-2xl font-bold leading-tight text-primary-foreground sm:text-3xl">
+                Genuine Maruti Suzuki parts, right fit.
+              </h1>
+            </div>
+            <div className="absolute bottom-3 right-4 flex gap-1.5">
+              {HERO_SLIDES.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSlide(i)}
+                  aria-label={`Slide ${i + 1}`}
+                  className={
+                    "h-1.5 rounded-full transition-all " +
+                    (i === slide ? "w-6 bg-accent" : "w-1.5 bg-primary-foreground/50")
+                  }
+                />
+              ))}
+            </div>
+          </div>
         </section>
 
         {/* Categories */}
@@ -91,18 +156,21 @@ function Index() {
           {categories.length === 0 ? (
             <EmptyHint text="No categories yet. Add some from the Admin panel." />
           ) : (
-            <div className="flex flex-wrap gap-2">
-              <CategoryChip active={activeCat === "all"} onClick={() => setActiveCat("all")}>
-                All
-              </CategoryChip>
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+              <CategoryCard
+                icon={Package}
+                label="All"
+                active={activeCat === "all"}
+                onClick={() => setActiveCat("all")}
+              />
               {categories.map((c) => (
-                <CategoryChip
+                <CategoryCard
                   key={c.id}
+                  icon={iconForCategory(c.name)}
+                  label={c.name}
                   active={activeCat === c.id}
                   onClick={() => setActiveCat(c.id)}
-                >
-                  {c.name}
-                </CategoryChip>
+                />
               ))}
             </div>
           )}
@@ -149,26 +217,29 @@ function Index() {
   );
 }
 
-function CategoryChip({
+function CategoryCard({
+  icon: Icon,
+  label,
   active,
   onClick,
-  children,
 }: {
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  label: string;
   active: boolean;
   onClick: () => void;
-  children: React.ReactNode;
 }) {
   return (
     <button
       onClick={onClick}
       className={
-        "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors " +
+        "flex flex-col items-center justify-center gap-2 rounded-xl border bg-card px-2 py-4 text-center transition-all " +
         (active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border bg-card text-foreground hover:border-primary/40")
+          ? "border-primary shadow-sm ring-1 ring-primary/30"
+          : "border-border hover:border-primary/40 hover:shadow-sm")
       }
     >
-      {children}
+      <Icon className={"h-6 w-6 " + (active ? "text-accent" : "text-primary")} strokeWidth={1.75} />
+      <span className="line-clamp-2 text-xs font-medium text-foreground">{label}</span>
     </button>
   );
 }
