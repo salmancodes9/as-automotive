@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "AS-AUTOMOTIVE" },
+      { name: "description", content: "Automotive Parts Hub is a web application for managing and discovering automotive parts." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "AS-AUTOMOTIVE" },
+      { property: "og:description", content: "Automotive Parts Hub is a web application for managing and discovering automotive parts." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "AS-AUTOMOTIVE" },
+      { name: "twitter:description", content: "Automotive Parts Hub is a web application for managing and discovering automotive parts." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3c4591fe-e2a4-4a21-afb8-c9b012923926/id-preview-677fe7fd--92da7e39-4975-4654-8f94-9dde07267946.lovable.app-1782061258429.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3c4591fe-e2a4-4a21-afb8-c9b012923926/id-preview-677fe7fd--92da7e39-4975-4654-8f94-9dde07267946.lovable.app-1782061258429.png" },
     ],
     links: [
       {
