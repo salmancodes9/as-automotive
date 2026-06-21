@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -170,6 +170,8 @@ function Index() {
                   label={c.name}
                   active={activeCat === c.id}
                   onClick={() => setActiveCat(c.id)}
+                  onDoubleClickHref={c.slug}
+                  href={c.slug}
                 />
               ))}
             </div>
@@ -222,12 +224,39 @@ function CategoryCard({
   label,
   active,
   onClick,
+  href,
 }: {
   icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   label: string;
   active: boolean;
   onClick: () => void;
+  href?: string;
+  onDoubleClickHref?: string;
 }) {
+  if (href) {
+    return (
+      <Link
+        to="/category/$slug"
+        params={{ slug: href }}
+        className={
+          "flex flex-col items-center justify-center gap-2 rounded-xl border bg-card px-2 py-4 text-center transition-all " +
+          (active
+            ? "border-primary shadow-sm ring-1 ring-primary/30"
+            : "border-border hover:border-primary/40 hover:shadow-sm")
+        }
+        onClick={(e) => {
+          // shift-click filters in place; normal click navigates
+          if (e.shiftKey) {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+      >
+        <Icon className={"h-6 w-6 " + (active ? "text-accent" : "text-primary")} strokeWidth={1.75} />
+        <span className="line-clamp-2 text-xs font-medium text-foreground">{label}</span>
+      </Link>
+    );
+  }
   return (
     <button
       onClick={onClick}
@@ -246,7 +275,11 @@ function CategoryCard({
 
 function AccessoryCard({ a, hot }: { a: Accessory; hot?: boolean }) {
   return (
-    <article className="group overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:shadow-md">
+    <Link
+      to="/product/$id"
+      params={{ id: a.id }}
+      className="group block overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:shadow-md"
+    >
       <div className="relative aspect-square bg-muted">
         {a.image_url ? (
           // eslint-disable-next-line jsx-a11y/alt-text
@@ -273,7 +306,7 @@ function AccessoryCard({ a, hot }: { a: Accessory; hot?: boolean }) {
           <p className="mt-1 text-sm font-semibold text-primary">₹{Number(a.price).toLocaleString("en-IN")}</p>
         )}
       </div>
-    </article>
+    </Link>
   );
 }
 
