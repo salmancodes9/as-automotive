@@ -99,7 +99,7 @@ function CategoryPage() {
                     <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">No image</div>
                   )}
                   {a.is_oem && (
-                    <span className="absolute left-2 top-2 rounded-md bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-sky-700 shadow-sm">
+                    <span className="absolute left-2 top-2 rounded-md bg-accent px-2.5 py-1 text-xs font-extrabold uppercase tracking-widest text-accent-foreground shadow-md ring-1 ring-accent-foreground/20">
                       OEM
                     </span>
                   )}
