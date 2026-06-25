@@ -70,6 +70,7 @@ type Accessory = {
   image_url: string | null;
   category_id: string | null;
   is_trending: boolean;
+  is_oem: boolean;
 };
 
 function Index() {
@@ -99,7 +100,7 @@ function Index() {
     queryFn: async (): Promise<Accessory[]> => {
       const { data, error } = await supabase
         .from("accessories")
-        .select("id,name,description,price,image_url,category_id,is_trending")
+        .select("id,name,description,price,image_url,category_id,is_trending,is_oem")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Accessory[];
