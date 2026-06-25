@@ -11,6 +11,7 @@ import {
   createAccessory,
   updateAccessory,
   deleteAccessory,
+  uploadProductImage,
 } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin")({
@@ -34,6 +35,7 @@ type Accessory = {
   image_url: string | null;
   category_id: string | null;
   is_trending: boolean;
+  is_oem: boolean;
 };
 
 function AdminPage() {
@@ -119,7 +121,7 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
     queryFn: async (): Promise<Accessory[]> => {
       const { data, error } = await supabase
         .from("accessories")
-        .select("id,name,description,price,image_url,category_id,is_trending")
+        .select("id,name,description,price,image_url,category_id,is_trending,is_oem")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Accessory[];
@@ -131,6 +133,7 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
   const addAcc = useServerFn(createAccessory);
   const updAcc = useServerFn(updateAccessory);
   const delAcc = useServerFn(deleteAccessory);
+  const upImg = useServerFn(uploadProductImage);
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["admin-categories"] });
@@ -149,6 +152,37 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
   const [aDesc, setADesc] = useState("");
   const [aCat, setACat] = useState("");
   const [aTrend, setATrend] = useState(false);
+  const [aOem, setAOem] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFilePick(file: File) {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image must be under 5 MB.");
+      return;
+    }
+    setUploading(true);
+    try {
+      const buf = await file.arrayBuffer();
+      let binary = "";
+      const bytes = new Uint8Array(buf);
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+      const dataBase64 = btoa(binary);
+      const res = await upImg({
+        data: {
+          passcode,
+          filename: file.name,
+          contentType: file.type || "application/octet-stream",
+          dataBase64,
+        },
+      });
+      setAImg(res.url);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -237,9 +271,10 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
                     image_url: aImg.trim() || null,
                     category_id: aCat || null,
                     is_trending: aTrend,
+                    is_oem: aOem,
                   },
                 });
-                setAName(""); setAPrice(""); setAImg(""); setADesc(""); setACat(""); setATrend(false);
+                setAName(""); setAPrice(""); setAImg(""); setADesc(""); setACat(""); setATrend(false); setAOem(false);
                 refresh();
               } catch (e: unknown) {
                 alert(e instanceof Error ? e.message : "Failed");
@@ -248,7 +283,35 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
           >
             <input value={aName} onChange={(e) => setAName(e.target.value)} placeholder="Name" className="rounded-md border border-input bg-background px-3 py-2 text-sm" />
             <input value={aPrice} onChange={(e) => setAPrice(e.target.value)} placeholder="Price (₹)" type="number" className="rounded-md border border-input bg-background px-3 py-2 text-sm" />
-            <input value={aImg} onChange={(e) => setAImg(e.target.value)} placeholder="Image URL" className="rounded-md border border-input bg-background px-3 py-2 text-sm sm:col-span-2" />
+            <div className="sm:col-span-2 space-y-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm hover:border-primary/40">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleFilePick(f);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                  {uploading ? "Uploading…" : "📷 Upload from gallery"}
+                </label>
+                <span className="text-xs text-muted-foreground">or paste image URL below</span>
+              </div>
+              <input
+                value={aImg}
+                onChange={(e) => setAImg(e.target.value)}
+                placeholder="Image URL"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+              {aImg && (
+                <div className="h-20 w-20 overflow-hidden rounded border border-border bg-muted">
+                  <img src={aImg} alt="" className="h-full w-full object-cover" />
+                </div>
+              )}
+            </div>
             <input value={aDesc} onChange={(e) => setADesc(e.target.value)} placeholder="Description (optional)" className="rounded-md border border-input bg-background px-3 py-2 text-sm sm:col-span-2" />
             <select value={aCat} onChange={(e) => setACat(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2 text-sm">
               <option value="">— Select category —</option>
@@ -256,10 +319,16 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={aTrend} onChange={(e) => setATrend(e.target.checked)} />
-              Trending / Hot
-            </label>
+            <div className="flex items-center gap-4 text-sm">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={aTrend} onChange={(e) => setATrend(e.target.checked)} />
+                Trending / Hot
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={aOem} onChange={(e) => setAOem(e.target.checked)} />
+                OEM
+              </label>
+            </div>
             <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground sm:col-span-2">
               Add accessory
             </button>
@@ -279,8 +348,22 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
                   <p className="text-xs text-muted-foreground">
                     {a.price != null ? `₹${Number(a.price).toLocaleString("en-IN")}` : "—"}
                     {a.is_trending && <span className="ml-2 text-accent">🔥 Hot</span>}
+                    {a.is_oem && <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">OEM</span>}
                   </p>
                 </div>
+                <button
+                  onClick={async () => {
+                    try {
+                      await updAcc({ data: { passcode, id: a.id, is_oem: !a.is_oem } });
+                      refresh();
+                    } catch (e: unknown) {
+                      alert(e instanceof Error ? e.message : "Failed");
+                    }
+                  }}
+                  className="text-xs text-primary hover:underline"
+                >
+                  {a.is_oem ? "Remove OEM" : "Mark OEM"}
+                </button>
                 <button
                   onClick={async () => {
                     try {
