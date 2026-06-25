@@ -401,7 +401,7 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
               <li className="py-3 text-sm text-muted-foreground">No accessories yet.</li>
             )}
             {accessories.map((a) => (
-              <li key={a.id} className="flex items-center gap-3 py-3 text-sm">
+              <li key={a.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
                 <div className="h-10 w-10 shrink-0 overflow-hidden rounded bg-muted">
                   {a.image_url && <img src={a.image_url} alt="" className="h-full w-full object-cover" />}
                 </div>
@@ -411,8 +411,50 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
                     {a.price != null ? `₹${Number(a.price).toLocaleString("en-IN")}` : "—"}
                     {a.is_trending && <span className="ml-2 text-accent">🔥 Hot</span>}
                     {a.is_oem && <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">OEM</span>}
+                    <span className="ml-2">📷 {1 + (a.images?.length ?? 0)} image{1 + (a.images?.length ?? 0) === 1 ? "" : "s"}</span>
                   </p>
                 </div>
+                <label className="cursor-pointer text-xs text-primary hover:underline">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      e.currentTarget.value = "";
+                      if (!f) return;
+                      const cur = a.images ?? [];
+                      if (cur.length >= 3) {
+                        alert("Up to 3 extra images (4 total).");
+                        return;
+                      }
+                      try {
+                        const url = await uploadFile(f);
+                        await updAcc({ data: { passcode, id: a.id, images: [...cur, url] } });
+                        refresh();
+                      } catch (err: unknown) {
+                        alert(err instanceof Error ? err.message : "Failed");
+                      }
+                    }}
+                  />
+                  + Image
+                </label>
+                {(a.images?.length ?? 0) > 0 && (
+                  <button
+                    onClick={async () => {
+                      if (!confirm("Remove all extra images?")) return;
+                      try {
+                        await updAcc({ data: { passcode, id: a.id, images: [] } });
+                        refresh();
+                      } catch (err: unknown) {
+                        alert(err instanceof Error ? err.message : "Failed");
+                      }
+                    }}
+                    className="text-xs text-muted-foreground hover:text-destructive hover:underline"
+                  >
+                    Clear extras
+                  </button>
+                )}
                 <button
                   onClick={async () => {
                     try {
