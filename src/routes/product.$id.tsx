@@ -1,5 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
 import { ArrowLeft, MessageCircle, Phone, Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
@@ -40,6 +41,7 @@ type Accessory = {
   category_id: string | null;
   is_trending: boolean;
   is_oem: boolean;
+  images: string[] | null;
   categories?: { name: string; slug: string } | null;
 };
 
@@ -51,7 +53,7 @@ function ProductPage() {
     queryFn: async (): Promise<Accessory | null> => {
       const { data, error } = await supabase
         .from("accessories")
-        .select("id,name,description,price,image_url,category_id,is_trending,is_oem,categories(name,slug)")
+        .select("id,name,description,price,image_url,category_id,is_trending,is_oem,images,categories(name,slug)")
         .eq("id", id)
         .maybeSingle();
       if (error) throw error;
@@ -60,6 +62,15 @@ function ProductPage() {
   });
 
   if (!isLoading && !product) throw notFound();
+
+  const gallery = useMemo(() => {
+    if (!product) return [] as string[];
+    const arr = [product.image_url, ...(product.images ?? [])].filter(
+      (x): x is string => !!x,
+    );
+    return Array.from(new Set(arr));
+  }, [product]);
+  const [active, setActive] = useState(0);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -73,25 +84,44 @@ function ProductPage() {
           <div className="mt-8 text-sm text-muted-foreground">Loading…</div>
         ) : (
           <div className="mt-5 grid gap-8 md:grid-cols-2">
-            <div className="overflow-hidden rounded-2xl border border-border bg-muted">
-              <div className="relative aspect-square w-full">
-                {product.image_url ? (
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
-                    No image
-                  </div>
-                )}
-                {product.is_oem && (
-                  <span className="absolute left-3 top-3 rounded-md bg-sky-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-sky-700 shadow">
-                    OEM
-                  </span>
-                )}
+            <div>
+              <div className="overflow-hidden rounded-2xl border border-border bg-muted">
+                <div className="relative aspect-square w-full">
+                  {gallery.length > 0 ? (
+                    <img
+                      src={gallery[active] ?? gallery[0]}
+                      alt={product.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+                      No image
+                    </div>
+                  )}
+                  {product.is_oem && (
+                    <span className="absolute left-3 top-3 rounded-lg bg-accent px-3 py-1.5 text-sm font-extrabold uppercase tracking-widest text-accent-foreground shadow-lg ring-2 ring-accent-foreground/20">
+                      OEM
+                    </span>
+                  )}
+                </div>
               </div>
+              {gallery.length > 1 && (
+                <div className="mt-3 flex gap-2 overflow-x-auto">
+                  {gallery.map((src, i) => (
+                    <button
+                      key={src}
+                      onClick={() => setActive(i)}
+                      className={
+                        "h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 bg-muted transition-all " +
+                        (i === active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/40")
+                      }
+                      aria-label={`Image ${i + 1}`}
+                    >
+                      <img src={src} alt="" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col">
