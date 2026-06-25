@@ -245,42 +245,37 @@ function CategoryCard({
   href?: string;
   onDoubleClickHref?: string;
 }) {
+  const base =
+    "group flex aspect-[4/5] flex-col items-center justify-center gap-3 rounded-xl border bg-white px-3 py-5 text-center shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all sm:aspect-square";
+  const state = active
+    ? "border-primary ring-1 ring-primary/30"
+    : "border-slate-200 hover:border-primary/40 hover:shadow-md";
+  const iconCls =
+    "h-10 w-10 sm:h-12 sm:w-12 " + (active ? "text-accent" : "text-primary");
+  const labelCls =
+    "line-clamp-2 text-xs sm:text-sm font-medium text-slate-700 group-hover:text-primary";
   if (href) {
     return (
       <Link
         to="/category/$slug"
         params={{ slug: href }}
-        className={
-          "flex flex-col items-center justify-center gap-2 rounded-xl border bg-card px-2 py-4 text-center transition-all " +
-          (active
-            ? "border-primary shadow-sm ring-1 ring-primary/30"
-            : "border-border hover:border-primary/40 hover:shadow-sm")
-        }
+        className={base + " " + state}
         onClick={(e) => {
-          // shift-click filters in place; normal click navigates
           if (e.shiftKey) {
             e.preventDefault();
             onClick();
           }
         }}
       >
-        <Icon className={"h-6 w-6 " + (active ? "text-accent" : "text-primary")} strokeWidth={1.75} />
-        <span className="line-clamp-2 text-xs font-medium text-foreground">{label}</span>
+        <Icon className={iconCls} strokeWidth={1.5} />
+        <span className={labelCls}>{label}</span>
       </Link>
     );
   }
   return (
-    <button
-      onClick={onClick}
-      className={
-        "flex flex-col items-center justify-center gap-2 rounded-xl border bg-card px-2 py-4 text-center transition-all " +
-        (active
-          ? "border-primary shadow-sm ring-1 ring-primary/30"
-          : "border-border hover:border-primary/40 hover:shadow-sm")
-      }
-    >
-      <Icon className={"h-6 w-6 " + (active ? "text-accent" : "text-primary")} strokeWidth={1.75} />
-      <span className="line-clamp-2 text-xs font-medium text-foreground">{label}</span>
+    <button onClick={onClick} className={base + " " + state}>
+      <Icon className={iconCls} strokeWidth={1.5} />
+      <span className={labelCls}>{label}</span>
     </button>
   );
 }
@@ -306,8 +301,13 @@ function AccessoryCard({ a, hot }: { a: Accessory; hot?: boolean }) {
             No image
           </div>
         )}
+        {a.is_oem && (
+          <span className="absolute left-2 top-2 rounded-md bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-sky-700 shadow-sm">
+            OEM
+          </span>
+        )}
         {hot && (
-          <span className="absolute left-2 top-2 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent-foreground">
+          <span className="absolute right-2 top-2 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent-foreground">
             Hot
           </span>
         )}
