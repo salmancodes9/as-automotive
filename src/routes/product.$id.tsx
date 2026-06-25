@@ -39,6 +39,7 @@ type Accessory = {
   image_url: string | null;
   category_id: string | null;
   is_trending: boolean;
+  is_oem: boolean;
   categories?: { name: string; slug: string } | null;
 };
 
@@ -50,7 +51,7 @@ function ProductPage() {
     queryFn: async (): Promise<Accessory | null> => {
       const { data, error } = await supabase
         .from("accessories")
-        .select("id,name,description,price,image_url,category_id,is_trending,categories(name,slug)")
+        .select("id,name,description,price,image_url,category_id,is_trending,is_oem,categories(name,slug)")
         .eq("id", id)
         .maybeSingle();
       if (error) throw error;
@@ -73,7 +74,7 @@ function ProductPage() {
         ) : (
           <div className="mt-5 grid gap-8 md:grid-cols-2">
             <div className="overflow-hidden rounded-2xl border border-border bg-muted">
-              <div className="aspect-square w-full">
+              <div className="relative aspect-square w-full">
                 {product.image_url ? (
                   <img
                     src={product.image_url}
@@ -84,6 +85,11 @@ function ProductPage() {
                   <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
                     No image
                   </div>
+                )}
+                {product.is_oem && (
+                  <span className="absolute left-3 top-3 rounded-md bg-sky-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-sky-700 shadow">
+                    OEM
+                  </span>
                 )}
               </div>
             </div>

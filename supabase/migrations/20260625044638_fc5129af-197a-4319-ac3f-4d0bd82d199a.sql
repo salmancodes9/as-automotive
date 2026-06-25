@@ -1,0 +1,1 @@
+ALTER TABLE public.accessories ADD COLUMN IF NOT EXISTS is_oem boolean NOT NULL DEFAULT false;

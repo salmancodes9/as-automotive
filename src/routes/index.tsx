@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Wrench, Disc, Cog, Zap, Car, Filter, Lightbulb, Gauge, Sparkles,
-  Wind, Droplets, CircleDot, Settings, Package,
+  Wind, Droplets, CircleDot, Settings, Package, Cable, Snowflake, Wind as Exhaust,
+  Fuel, CircleDashed, Cpu, SprayCan, ShieldCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
@@ -18,15 +19,25 @@ function iconForCategory(name: string) {
   const n = name.toLowerCase();
   if (n.includes("brake")) return Disc;
   if (n.includes("shock") || n.includes("suspension")) return Cog;
-  if (n.includes("electric") || n.includes("battery")) return Zap;
+  if (n.includes("electric") || n.includes("electronic")) return Cpu;
+  if (n.includes("battery")) return Zap;
   if (n.includes("body") || n.includes("exterior")) return Car;
   if (n.includes("filter")) return Filter;
   if (n.includes("light") || n.includes("lamp") || n.includes("head")) return Lightbulb;
+  if (n.includes("engine cool")) return Snowflake;
   if (n.includes("engine")) return Gauge;
   if (n.includes("interior") || n.includes("cabin")) return Sparkles;
-  if (n.includes("ac") || n.includes("air")) return Wind;
+  if (n.includes("air cond") || n.includes(" ac")) return Wind;
+  if (n.includes("exhaust")) return Exhaust;
   if (n.includes("oil") || n.includes("fluid")) return Droplets;
   if (n.includes("tyre") || n.includes("tire") || n.includes("wheel")) return CircleDot;
+  if (n.includes("bearing")) return CircleDashed;
+  if (n.includes("clutch")) return Settings;
+  if (n.includes("cable") || n.includes("control")) return Cable;
+  if (n.includes("windscreen") || n.includes("wiper") || n.includes("washer")) return SprayCan;
+  if (n.includes("fuel")) return Fuel;
+  if (n.includes("maintenance") || n.includes("service")) return Wrench;
+  if (n.includes("accessor")) return ShieldCheck;
   if (n.includes("maruti") || n.includes("part")) return Settings;
   return Package;
 }
@@ -59,6 +70,7 @@ type Accessory = {
   image_url: string | null;
   category_id: string | null;
   is_trending: boolean;
+  is_oem: boolean;
 };
 
 function Index() {
@@ -88,7 +100,7 @@ function Index() {
     queryFn: async (): Promise<Accessory[]> => {
       const { data, error } = await supabase
         .from("accessories")
-        .select("id,name,description,price,image_url,category_id,is_trending")
+        .select("id,name,description,price,image_url,category_id,is_trending,is_oem")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Accessory[];
@@ -150,13 +162,13 @@ function Index() {
 
         {/* Categories */}
         <section className="mt-8">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Categories
           </h2>
           {categories.length === 0 ? (
             <EmptyHint text="No categories yet. Add some from the Admin panel." />
           ) : (
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
               <CategoryCard
                 icon={Package}
                 label="All"
@@ -233,42 +245,37 @@ function CategoryCard({
   href?: string;
   onDoubleClickHref?: string;
 }) {
+  const base =
+    "group flex aspect-[4/5] flex-col items-center justify-center gap-3 rounded-xl border bg-white px-3 py-5 text-center shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all sm:aspect-square";
+  const state = active
+    ? "border-primary ring-1 ring-primary/30"
+    : "border-slate-200 hover:border-primary/40 hover:shadow-md";
+  const iconCls =
+    "h-10 w-10 sm:h-12 sm:w-12 " + (active ? "text-accent" : "text-primary");
+  const labelCls =
+    "line-clamp-2 text-xs sm:text-sm font-medium text-slate-700 group-hover:text-primary";
   if (href) {
     return (
       <Link
         to="/category/$slug"
         params={{ slug: href }}
-        className={
-          "flex flex-col items-center justify-center gap-2 rounded-xl border bg-card px-2 py-4 text-center transition-all " +
-          (active
-            ? "border-primary shadow-sm ring-1 ring-primary/30"
-            : "border-border hover:border-primary/40 hover:shadow-sm")
-        }
+        className={base + " " + state}
         onClick={(e) => {
-          // shift-click filters in place; normal click navigates
           if (e.shiftKey) {
             e.preventDefault();
             onClick();
           }
         }}
       >
-        <Icon className={"h-6 w-6 " + (active ? "text-accent" : "text-primary")} strokeWidth={1.75} />
-        <span className="line-clamp-2 text-xs font-medium text-foreground">{label}</span>
+        <Icon className={iconCls} strokeWidth={1.5} />
+        <span className={labelCls}>{label}</span>
       </Link>
     );
   }
   return (
-    <button
-      onClick={onClick}
-      className={
-        "flex flex-col items-center justify-center gap-2 rounded-xl border bg-card px-2 py-4 text-center transition-all " +
-        (active
-          ? "border-primary shadow-sm ring-1 ring-primary/30"
-          : "border-border hover:border-primary/40 hover:shadow-sm")
-      }
-    >
-      <Icon className={"h-6 w-6 " + (active ? "text-accent" : "text-primary")} strokeWidth={1.75} />
-      <span className="line-clamp-2 text-xs font-medium text-foreground">{label}</span>
+    <button onClick={onClick} className={base + " " + state}>
+      <Icon className={iconCls} strokeWidth={1.5} />
+      <span className={labelCls}>{label}</span>
     </button>
   );
 }
@@ -294,8 +301,13 @@ function AccessoryCard({ a, hot }: { a: Accessory; hot?: boolean }) {
             No image
           </div>
         )}
+        {a.is_oem && (
+          <span className="absolute left-2 top-2 rounded-md bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-sky-700 shadow-sm">
+            OEM
+          </span>
+        )}
         {hot && (
-          <span className="absolute left-2 top-2 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent-foreground">
+          <span className="absolute right-2 top-2 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent-foreground">
             Hot
           </span>
         )}

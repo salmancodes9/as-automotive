@@ -46,6 +46,7 @@ export const createAccessory = createServerFn({ method: "POST" })
     image_url?: string | null;
     category_id?: string | null;
     is_trending?: boolean;
+    is_oem?: boolean;
   }) => input)
   .handler(async ({ data }) => {
     checkPasscode(data.passcode);
@@ -59,6 +60,7 @@ export const createAccessory = createServerFn({ method: "POST" })
         image_url: data.image_url ?? null,
         category_id: data.category_id ?? null,
         is_trending: data.is_trending ?? false,
+        is_oem: data.is_oem ?? false,
       })
       .select()
       .single();
@@ -76,6 +78,7 @@ export const updateAccessory = createServerFn({ method: "POST" })
     image_url?: string | null;
     category_id?: string | null;
     is_trending?: boolean;
+    is_oem?: boolean;
   }) => input)
   .handler(async ({ data }) => {
     checkPasscode(data.passcode);
@@ -100,4 +103,30 @@ export const deleteAccessory = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.from("accessories").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+const TEN_YEARS_SECONDS = 60 * 60 * 24 * 365 * 10;
+
+export const uploadProductImage = createServerFn({ method: "POST" })
+  .inputValidator((input: {
+    passcode: string;
+    filename: string;
+    contentType: string;
+    dataBase64: string;
+  }) => input)
+  .handler(async ({ data }) => {
+    checkPasscode(data.passcode);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const bytes = Uint8Array.from(atob(data.dataBase64), (c) => c.charCodeAt(0));
+    const safeName = data.filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
+    const { error: upErr } = await supabaseAdmin.storage
+      .from("product-images")
+      .upload(path, bytes, { contentType: data.contentType, upsert: false });
+    if (upErr) throw new Error(upErr.message);
+    const { data: signed, error: signErr } = await supabaseAdmin.storage
+      .from("product-images")
+      .createSignedUrl(path, TEN_YEARS_SECONDS);
+    if (signErr || !signed) throw new Error(signErr?.message ?? "Failed to sign URL");
+    return { url: signed.signedUrl, path };
   });

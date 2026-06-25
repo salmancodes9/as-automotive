@@ -30,6 +30,7 @@ type Accessory = {
   price: number | null;
   image_url: string | null;
   is_trending: boolean;
+  is_oem: boolean;
 };
 
 function CategoryPage() {
@@ -54,7 +55,7 @@ function CategoryPage() {
     queryFn: async (): Promise<Accessory[]> => {
       const { data, error } = await supabase
         .from("accessories")
-        .select("id,name,price,image_url,is_trending")
+        .select("id,name,price,image_url,is_trending,is_oem")
         .eq("category_id", category!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -97,8 +98,13 @@ function CategoryPage() {
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">No image</div>
                   )}
+                  {a.is_oem && (
+                    <span className="absolute left-2 top-2 rounded-md bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-sky-700 shadow-sm">
+                      OEM
+                    </span>
+                  )}
                   {a.is_trending && (
-                    <span className="absolute left-2 top-2 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent-foreground">
+                    <span className="absolute right-2 top-2 rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent-foreground">
                       Hot
                     </span>
                   )}
