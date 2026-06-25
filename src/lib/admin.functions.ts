@@ -47,6 +47,7 @@ export const createAccessory = createServerFn({ method: "POST" })
     category_id?: string | null;
     is_trending?: boolean;
     is_oem?: boolean;
+    images?: string[];
   }) => input)
   .handler(async ({ data }) => {
     checkPasscode(data.passcode);
@@ -61,6 +62,7 @@ export const createAccessory = createServerFn({ method: "POST" })
         category_id: data.category_id ?? null,
         is_trending: data.is_trending ?? false,
         is_oem: data.is_oem ?? false,
+        images: data.images ?? [],
       })
       .select()
       .single();
@@ -79,6 +81,7 @@ export const updateAccessory = createServerFn({ method: "POST" })
     category_id?: string | null;
     is_trending?: boolean;
     is_oem?: boolean;
+    images?: string[];
   }) => input)
   .handler(async ({ data }) => {
     checkPasscode(data.passcode);
