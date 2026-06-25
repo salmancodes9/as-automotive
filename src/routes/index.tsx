@@ -12,8 +12,14 @@ import { Footer } from "@/components/site/Footer";
 import heroCar1 from "@/assets/hero-car-1.jpg";
 import heroCar2 from "@/assets/hero-car-2.jpg";
 import heroCar3 from "@/assets/hero-car-3.jpg";
+import heroOemParts from "@/assets/hero-oem-parts.jpg";
 
-const HERO_SLIDES = [heroCar1, heroCar2, heroCar3];
+const HERO_SLIDES: { src: string; label: string; oem?: boolean }[] = [
+  { src: heroCar1, label: "Maruti Suzuki car" },
+  { src: heroOemParts, label: "Genuine OEM Maruti Suzuki parts", oem: true },
+  { src: heroCar2, label: "Maruti Suzuki car" },
+  { src: heroCar3, label: "Maruti Suzuki car" },
+];
 
 function iconForCategory(name: string) {
   const n = name.toLowerCase();
@@ -121,11 +127,11 @@ function Index() {
         {/* Hero carousel */}
         <section className="relative overflow-hidden rounded-2xl bg-primary">
           <div className="relative aspect-[16/10] w-full sm:aspect-[21/9]">
-            {HERO_SLIDES.map((src, i) => (
+            {HERO_SLIDES.map((s, i) => (
               <img
-                key={src}
-                src={src}
-                alt="Maruti Suzuki car"
+                key={s.src}
+                src={s.src}
+                alt={s.label}
                 width={1280}
                 height={720}
                 className={
@@ -135,6 +141,11 @@ function Index() {
                 loading={i === 0 ? "eager" : "lazy"}
               />
             ))}
+            {HERO_SLIDES[slide]?.oem && (
+              <span className="absolute left-4 top-4 z-10 rounded-lg bg-accent px-3 py-1.5 text-sm font-extrabold uppercase tracking-[0.18em] text-accent-foreground shadow-lg ring-2 ring-accent-foreground/30">
+                Genuine OEM
+              </span>
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-primary/85 via-primary/30 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
@@ -302,7 +313,7 @@ function AccessoryCard({ a, hot }: { a: Accessory; hot?: boolean }) {
           </div>
         )}
         {a.is_oem && (
-          <span className="absolute left-2 top-2 rounded-md bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-sky-700 shadow-sm">
+          <span className="absolute left-2 top-2 rounded-md bg-accent px-2.5 py-1 text-xs font-extrabold uppercase tracking-widest text-accent-foreground shadow-md ring-1 ring-accent-foreground/20">
             OEM
           </span>
         )}

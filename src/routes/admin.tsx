@@ -36,6 +36,7 @@ type Accessory = {
   category_id: string | null;
   is_trending: boolean;
   is_oem: boolean;
+  images: string[] | null;
 };
 
 function AdminPage() {
@@ -121,7 +122,7 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
     queryFn: async (): Promise<Accessory[]> => {
       const { data, error } = await supabase
         .from("accessories")
-        .select("id,name,description,price,image_url,category_id,is_trending,is_oem")
+        .select("id,name,description,price,image_url,category_id,is_trending,is_oem,images")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Accessory[];
@@ -149,38 +150,58 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
   const [aName, setAName] = useState("");
   const [aPrice, setAPrice] = useState("");
   const [aImg, setAImg] = useState("");
+  const [aExtra, setAExtra] = useState<string[]>([]);
   const [aDesc, setADesc] = useState("");
   const [aCat, setACat] = useState("");
   const [aTrend, setATrend] = useState(false);
   const [aOem, setAOem] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingExtra, setUploadingExtra] = useState(false);
+
+  async function uploadFile(file: File): Promise<string> {
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error("Image must be under 5 MB.");
+    }
+    const buf = await file.arrayBuffer();
+    let binary = "";
+    const bytes = new Uint8Array(buf);
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    const dataBase64 = btoa(binary);
+    const res = await upImg({
+      data: {
+        passcode,
+        filename: file.name,
+        contentType: file.type || "application/octet-stream",
+        dataBase64,
+      },
+    });
+    return res.url;
+  }
 
   async function handleFilePick(file: File) {
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Image must be under 5 MB.");
-      return;
-    }
     setUploading(true);
     try {
-      const buf = await file.arrayBuffer();
-      let binary = "";
-      const bytes = new Uint8Array(buf);
-      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-      const dataBase64 = btoa(binary);
-      const res = await upImg({
-        data: {
-          passcode,
-          filename: file.name,
-          contentType: file.type || "application/octet-stream",
-          dataBase64,
-        },
-      });
-      setAImg(res.url);
+      setAImg(await uploadFile(file));
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleExtraPick(file: File) {
+    if (aExtra.length >= 3) {
+      alert("You can add up to 3 extra images (4 total).");
+      return;
+    }
+    setUploadingExtra(true);
+    try {
+      const url = await uploadFile(file);
+      setAExtra((cur) => [...cur, url]);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploadingExtra(false);
     }
   }
 
@@ -272,9 +293,10 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
                     category_id: aCat || null,
                     is_trending: aTrend,
                     is_oem: aOem,
+                    images: aExtra,
                   },
                 });
-                setAName(""); setAPrice(""); setAImg(""); setADesc(""); setACat(""); setATrend(false); setAOem(false);
+                setAName(""); setAPrice(""); setAImg(""); setADesc(""); setACat(""); setATrend(false); setAOem(false); setAExtra([]);
                 refresh();
               } catch (e: unknown) {
                 alert(e instanceof Error ? e.message : "Failed");
@@ -311,6 +333,46 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
                   <img src={aImg} alt="" className="h-full w-full object-cover" />
                 </div>
               )}
+              <div className="rounded-md border border-dashed border-input p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Extra images ({aExtra.length}/3)
+                  </p>
+                  <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-input bg-background px-2.5 py-1 text-xs hover:border-primary/40">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingExtra || aExtra.length >= 3}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleExtraPick(f);
+                        e.currentTarget.value = "";
+                      }}
+                    />
+                    {uploadingExtra ? "Uploading…" : "＋ Add image"}
+                  </label>
+                </div>
+                {aExtra.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {aExtra.map((u, i) => (
+                      <div key={u} className="relative">
+                        <div className="h-16 w-16 overflow-hidden rounded border border-border bg-muted">
+                          <img src={u} alt="" className="h-full w-full object-cover" />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAExtra((cur) => cur.filter((_, j) => j !== i))}
+                          className="absolute -right-1.5 -top-1.5 h-5 w-5 rounded-full bg-destructive text-[10px] font-bold text-white"
+                          aria-label="Remove"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <input value={aDesc} onChange={(e) => setADesc(e.target.value)} placeholder="Description (optional)" className="rounded-md border border-input bg-background px-3 py-2 text-sm sm:col-span-2" />
             <select value={aCat} onChange={(e) => setACat(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2 text-sm">
@@ -339,7 +401,7 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
               <li className="py-3 text-sm text-muted-foreground">No accessories yet.</li>
             )}
             {accessories.map((a) => (
-              <li key={a.id} className="flex items-center gap-3 py-3 text-sm">
+              <li key={a.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
                 <div className="h-10 w-10 shrink-0 overflow-hidden rounded bg-muted">
                   {a.image_url && <img src={a.image_url} alt="" className="h-full w-full object-cover" />}
                 </div>
@@ -349,8 +411,50 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
                     {a.price != null ? `₹${Number(a.price).toLocaleString("en-IN")}` : "—"}
                     {a.is_trending && <span className="ml-2 text-accent">🔥 Hot</span>}
                     {a.is_oem && <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">OEM</span>}
+                    <span className="ml-2">📷 {1 + (a.images?.length ?? 0)} image{1 + (a.images?.length ?? 0) === 1 ? "" : "s"}</span>
                   </p>
                 </div>
+                <label className="cursor-pointer text-xs text-primary hover:underline">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      e.currentTarget.value = "";
+                      if (!f) return;
+                      const cur = a.images ?? [];
+                      if (cur.length >= 3) {
+                        alert("Up to 3 extra images (4 total).");
+                        return;
+                      }
+                      try {
+                        const url = await uploadFile(f);
+                        await updAcc({ data: { passcode, id: a.id, images: [...cur, url] } });
+                        refresh();
+                      } catch (err: unknown) {
+                        alert(err instanceof Error ? err.message : "Failed");
+                      }
+                    }}
+                  />
+                  + Image
+                </label>
+                {(a.images?.length ?? 0) > 0 && (
+                  <button
+                    onClick={async () => {
+                      if (!confirm("Remove all extra images?")) return;
+                      try {
+                        await updAcc({ data: { passcode, id: a.id, images: [] } });
+                        refresh();
+                      } catch (err: unknown) {
+                        alert(err instanceof Error ? err.message : "Failed");
+                      }
+                    }}
+                    className="text-xs text-muted-foreground hover:text-destructive hover:underline"
+                  >
+                    Clear extras
+                  </button>
+                )}
                 <button
                   onClick={async () => {
                     try {
