@@ -293,9 +293,10 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
                     category_id: aCat || null,
                     is_trending: aTrend,
                     is_oem: aOem,
+                    images: aExtra,
                   },
                 });
-                setAName(""); setAPrice(""); setAImg(""); setADesc(""); setACat(""); setATrend(false); setAOem(false);
+                setAName(""); setAPrice(""); setAImg(""); setADesc(""); setACat(""); setATrend(false); setAOem(false); setAExtra([]);
                 refresh();
               } catch (e: unknown) {
                 alert(e instanceof Error ? e.message : "Failed");
@@ -332,6 +333,46 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
                   <img src={aImg} alt="" className="h-full w-full object-cover" />
                 </div>
               )}
+              <div className="rounded-md border border-dashed border-input p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Extra images ({aExtra.length}/3)
+                  </p>
+                  <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-input bg-background px-2.5 py-1 text-xs hover:border-primary/40">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingExtra || aExtra.length >= 3}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleExtraPick(f);
+                        e.currentTarget.value = "";
+                      }}
+                    />
+                    {uploadingExtra ? "Uploading…" : "＋ Add image"}
+                  </label>
+                </div>
+                {aExtra.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {aExtra.map((u, i) => (
+                      <div key={u} className="relative">
+                        <div className="h-16 w-16 overflow-hidden rounded border border-border bg-muted">
+                          <img src={u} alt="" className="h-full w-full object-cover" />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAExtra((cur) => cur.filter((_, j) => j !== i))}
+                          className="absolute -right-1.5 -top-1.5 h-5 w-5 rounded-full bg-destructive text-[10px] font-bold text-white"
+                          aria-label="Remove"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <input value={aDesc} onChange={(e) => setADesc(e.target.value)} placeholder="Description (optional)" className="rounded-md border border-input bg-background px-3 py-2 text-sm sm:col-span-2" />
             <select value={aCat} onChange={(e) => setACat(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2 text-sm">
