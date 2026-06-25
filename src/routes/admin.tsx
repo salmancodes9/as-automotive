@@ -36,6 +36,7 @@ type Accessory = {
   category_id: string | null;
   is_trending: boolean;
   is_oem: boolean;
+  images: string[] | null;
 };
 
 function AdminPage() {
@@ -121,7 +122,7 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
     queryFn: async (): Promise<Accessory[]> => {
       const { data, error } = await supabase
         .from("accessories")
-        .select("id,name,description,price,image_url,category_id,is_trending,is_oem")
+        .select("id,name,description,price,image_url,category_id,is_trending,is_oem,images")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Accessory[];
@@ -149,38 +150,58 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
   const [aName, setAName] = useState("");
   const [aPrice, setAPrice] = useState("");
   const [aImg, setAImg] = useState("");
+  const [aExtra, setAExtra] = useState<string[]>([]);
   const [aDesc, setADesc] = useState("");
   const [aCat, setACat] = useState("");
   const [aTrend, setATrend] = useState(false);
   const [aOem, setAOem] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingExtra, setUploadingExtra] = useState(false);
+
+  async function uploadFile(file: File): Promise<string> {
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error("Image must be under 5 MB.");
+    }
+    const buf = await file.arrayBuffer();
+    let binary = "";
+    const bytes = new Uint8Array(buf);
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+    const dataBase64 = btoa(binary);
+    const res = await upImg({
+      data: {
+        passcode,
+        filename: file.name,
+        contentType: file.type || "application/octet-stream",
+        dataBase64,
+      },
+    });
+    return res.url;
+  }
 
   async function handleFilePick(file: File) {
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Image must be under 5 MB.");
-      return;
-    }
     setUploading(true);
     try {
-      const buf = await file.arrayBuffer();
-      let binary = "";
-      const bytes = new Uint8Array(buf);
-      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-      const dataBase64 = btoa(binary);
-      const res = await upImg({
-        data: {
-          passcode,
-          filename: file.name,
-          contentType: file.type || "application/octet-stream",
-          dataBase64,
-        },
-      });
-      setAImg(res.url);
+      setAImg(await uploadFile(file));
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleExtraPick(file: File) {
+    if (aExtra.length >= 3) {
+      alert("You can add up to 3 extra images (4 total).");
+      return;
+    }
+    setUploadingExtra(true);
+    try {
+      const url = await uploadFile(file);
+      setAExtra((cur) => [...cur, url]);
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploadingExtra(false);
     }
   }
 
