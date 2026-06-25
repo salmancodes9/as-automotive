@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Wrench, Disc, Cog, Zap, Car, Filter, Lightbulb, Gauge, Sparkles,
-  Wind, Droplets, CircleDot, Settings, Package,
+  Wind, Droplets, CircleDot, Settings, Package, Cable, Snowflake, Wind as Exhaust,
+  Fuel, CircleDashed, Cpu, SprayCan, ShieldCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
@@ -18,15 +19,25 @@ function iconForCategory(name: string) {
   const n = name.toLowerCase();
   if (n.includes("brake")) return Disc;
   if (n.includes("shock") || n.includes("suspension")) return Cog;
-  if (n.includes("electric") || n.includes("battery")) return Zap;
+  if (n.includes("electric") || n.includes("electronic")) return Cpu;
+  if (n.includes("battery")) return Zap;
   if (n.includes("body") || n.includes("exterior")) return Car;
   if (n.includes("filter")) return Filter;
   if (n.includes("light") || n.includes("lamp") || n.includes("head")) return Lightbulb;
+  if (n.includes("engine cool")) return Snowflake;
   if (n.includes("engine")) return Gauge;
   if (n.includes("interior") || n.includes("cabin")) return Sparkles;
-  if (n.includes("ac") || n.includes("air")) return Wind;
+  if (n.includes("air cond") || n.includes(" ac")) return Wind;
+  if (n.includes("exhaust")) return Exhaust;
   if (n.includes("oil") || n.includes("fluid")) return Droplets;
   if (n.includes("tyre") || n.includes("tire") || n.includes("wheel")) return CircleDot;
+  if (n.includes("bearing")) return CircleDashed;
+  if (n.includes("clutch")) return Settings;
+  if (n.includes("cable") || n.includes("control")) return Cable;
+  if (n.includes("windscreen") || n.includes("wiper") || n.includes("washer")) return SprayCan;
+  if (n.includes("fuel")) return Fuel;
+  if (n.includes("maintenance") || n.includes("service")) return Wrench;
+  if (n.includes("accessor")) return ShieldCheck;
   if (n.includes("maruti") || n.includes("part")) return Settings;
   return Package;
 }
@@ -150,13 +161,13 @@ function Index() {
 
         {/* Categories */}
         <section className="mt-8">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Categories
           </h2>
           {categories.length === 0 ? (
             <EmptyHint text="No categories yet. Add some from the Admin panel." />
           ) : (
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
               <CategoryCard
                 icon={Package}
                 label="All"
