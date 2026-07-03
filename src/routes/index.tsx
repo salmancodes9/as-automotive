@@ -15,10 +15,10 @@ import heroCar3 from "@/assets/hero-car-3.jpg";
 import heroOemParts from "@/assets/hero-oem-parts.jpg";
 
 const HERO_SLIDES: { src: string; label: string; oem?: boolean }[] = [
-  { src: heroCar1, label: "Maruti Suzuki car" },
-  { src: heroOemParts, label: "Genuine OEM Maruti Suzuki parts", oem: true },
-  { src: heroCar2, label: "Maruti Suzuki car" },
-  { src: heroCar3, label: "Maruti Suzuki car" },
+  { src: heroCar1, label: "Maruti Suzuki car serviced at AS Automobiles, Srinagar" },
+  { src: heroOemParts, label: "Genuine OEM Maruti Suzuki spare parts collection", oem: true },
+  { src: heroCar2, label: "Maruti Suzuki hatchback showcased with genuine parts" },
+  { src: heroCar3, label: "Maruti Suzuki sedan alongside authentic accessories" },
 ];
 
 function iconForCategory(name: string) {
@@ -51,18 +51,22 @@ function iconForCategory(name: string) {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "AS Automobiles — Genuine Maruti Suzuki Parts & Accessories" },
+      { title: "AS Automobiles - Genuine Maruti Suzuki Spare Parts | Tengpora, Srinagar" },
       {
         name: "description",
         content:
-          "Genuine Maruti Suzuki parts and accessories in Srinagar, J&K. Browse categories and trending parts at AS Automobiles.",
+          "Shop genuine Maruti Suzuki spare parts and accessories at AS Automobiles, Tengpora, Srinagar. OEM brakes, filters, batteries, lights and more with fast WhatsApp inquiries.",
       },
-      { property: "og:title", content: "AS Automobiles" },
+      { property: "og:title", content: "AS Automobiles - Genuine Maruti Suzuki Spare Parts" },
       {
         property: "og:description",
-        content: "Genuine Maruti Suzuki parts & accessories — Tengpora, Srinagar.",
+        content:
+          "Genuine Maruti Suzuki parts & accessories in Tengpora, Srinagar, Kashmir. OEM quality, trusted service.",
       },
+      { property: "og:url", content: "https://as-automotive.lovable.app/" },
+      { property: "og:type", content: "website" },
     ],
+    links: [{ rel: "canonical", href: "https://as-automotive.lovable.app/" }],
   }),
   component: Index,
 });
@@ -303,7 +307,7 @@ function AccessoryCard({ a, hot }: { a: Accessory; hot?: boolean }) {
           // eslint-disable-next-line jsx-a11y/alt-text
           <img
             src={a.image_url}
-            alt={a.name}
+            alt={`${a.name}${a.is_oem ? " - Genuine OEM Maruti Suzuki part" : " - Maruti Suzuki spare part"} at AS Automobiles`}
             className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
             loading="lazy"
           />

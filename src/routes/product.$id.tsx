@@ -12,12 +12,40 @@ import {
 } from "@/lib/contact";
 
 export const Route = createFileRoute("/product/$id")({
-  head: () => ({
-    meta: [
-      { title: "Product — AS Automobiles" },
-      { name: "description", content: "Genuine Maruti Suzuki accessory details." },
-    ],
-  }),
+  loader: async ({ params }) => {
+    const { data } = await supabase
+      .from("accessories")
+      .select("name,description,image_url,is_oem,price")
+      .eq("id", params.id)
+      .maybeSingle();
+    return { product: data as { name: string; description: string | null; image_url: string | null; is_oem: boolean; price: number | null } | null };
+  },
+  head: ({ params, loaderData }) => {
+    const p = loaderData?.product;
+    const name = p?.name ?? "Maruti Suzuki Part";
+    const oem = p?.is_oem ? "Genuine OEM " : "Genuine ";
+    const title = `${name} - ${oem}Maruti Suzuki Spare Part | AS Automobiles, Srinagar`;
+    const description = p?.description
+      ? p.description.slice(0, 155)
+      : `Buy ${oem.toLowerCase()}Maruti Suzuki ${name} from AS Automobiles in Tengpora, Srinagar. Fast WhatsApp inquiries at +91 60055 63521.`;
+    const url = `https://as-automotive.lovable.app/product/${params.id}`;
+    const meta: Array<Record<string, string>> = [
+      { title },
+      { name: "description", content: description },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:url", content: url },
+      { property: "og:type", content: "product" },
+    ];
+    if (p?.image_url) {
+      meta.push({ property: "og:image", content: p.image_url });
+      meta.push({ name: "twitter:image", content: p.image_url });
+    }
+    return {
+      meta,
+      links: [{ rel: "canonical", href: url }],
+    };
+  },
   component: ProductPage,
   notFoundComponent: () => (
     <div className="min-h-screen bg-background">
@@ -90,7 +118,7 @@ function ProductPage() {
                   {gallery.length > 0 ? (
                     <img
                       src={gallery[active] ?? gallery[0]}
-                      alt={product.name}
+                      alt={`${product.name}${product.is_oem ? " - Genuine OEM Maruti Suzuki part" : " - Maruti Suzuki spare part"} at AS Automobiles`}
                       className="h-full w-full object-cover"
                     />
                   ) : (

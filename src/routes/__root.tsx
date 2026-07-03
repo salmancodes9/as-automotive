@@ -78,18 +78,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "AS-AUTOMOTIVE" },
-      { name: "description", content: "Automotive Parts Hub is a web application for managing and discovering automotive parts." },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "AS-AUTOMOTIVE" },
-      { property: "og:description", content: "Automotive Parts Hub is a web application for managing and discovering automotive parts." },
+      { title: "AS Automobiles - Genuine Maruti Suzuki Spare Parts | Tengpora, Srinagar" },
+      {
+        name: "description",
+        content:
+          "AS Automobiles sells genuine Maruti Suzuki spare parts and accessories in Tengpora, Srinagar, Kashmir. Wide range of OEM parts with quick WhatsApp inquiries.",
+      },
+      { property: "og:site_name", content: "AS Automobiles" },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "AS-AUTOMOTIVE" },
-      { name: "twitter:description", content: "Automotive Parts Hub is a web application for managing and discovering automotive parts." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3c4591fe-e2a4-4a21-afb8-c9b012923926/id-preview-677fe7fd--92da7e39-4975-4654-8f94-9dde07267946.lovable.app-1782061258429.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/3c4591fe-e2a4-4a21-afb8-c9b012923926/id-preview-677fe7fd--92da7e39-4975-4654-8f94-9dde07267946.lovable.app-1782061258429.png" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       {
@@ -98,6 +95,32 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "icon", type: "image/png", href: faviconUrl },
       { rel: "apple-touch-icon", href: faviconUrl },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "AutoPartsStore",
+          name: "AS Automobiles",
+          description:
+            "Genuine Maruti Suzuki spare parts and accessories store in Srinagar, Kashmir.",
+          url: "https://as-automotive.lovable.app",
+          telephone: "+91 60055 63521",
+          priceRange: "₹₹",
+          address: {
+            "@type": "PostalAddress",
+            streetAddress: "Tengpora",
+            addressLocality: "Srinagar",
+            addressRegion: "Jammu & Kashmir",
+            addressCountry: "IN",
+          },
+          areaServed: {
+            "@type": "City",
+            name: "Srinagar",
+          },
+        }),
+      },
     ],
   }),
   shellComponent: RootShell,

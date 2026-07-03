@@ -6,9 +6,31 @@ import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
 
 export const Route = createFileRoute("/category/$slug")({
-  head: () => ({
-    meta: [{ title: "Category — AS Automobiles" }],
-  }),
+  loader: async ({ params }) => {
+    const { data } = await supabase
+      .from("categories")
+      .select("name,slug")
+      .eq("slug", params.slug)
+      .maybeSingle();
+    return { category: data as { name: string; slug: string } | null };
+  },
+  head: ({ params, loaderData }) => {
+    const name = loaderData?.category?.name ?? "Maruti Suzuki Parts";
+    const title = `${name} - Genuine Maruti Suzuki ${name} in Srinagar | AS Automobiles`;
+    const description = `Buy genuine Maruti Suzuki ${name.toLowerCase()} in Tengpora, Srinagar. OEM quality parts from AS Automobiles - quick WhatsApp inquiries and trusted service.`;
+    const url = `https://as-automotive.lovable.app/category/${params.slug}`;
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:url", content: url },
+        { property: "og:type", content: "website" },
+      ],
+      links: [{ rel: "canonical", href: url }],
+    };
+  },
   component: CategoryPage,
   notFoundComponent: () => (
     <div className="min-h-screen bg-background">
@@ -94,7 +116,7 @@ function CategoryPage() {
               >
                 <div className="relative aspect-square bg-muted">
                   {a.image_url ? (
-                    <img src={a.image_url} alt={a.name} className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]" loading="lazy" />
+                    <img src={a.image_url} alt={`${a.name}${a.is_oem ? " - Genuine OEM Maruti Suzuki part" : " - Maruti Suzuki spare part"} at AS Automobiles`} className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]" loading="lazy" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">No image</div>
                   )}
