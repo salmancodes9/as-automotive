@@ -51,18 +51,24 @@ function iconForCategory(name: string) {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "AS Automobiles — Genuine Maruti Suzuki Parts & Accessories" },
+      { title: "AS Automobiles - Genuine Maruti Suzuki Spare Parts | Tengpora, Srinagar" },
       {
         name: "description",
         content:
-          "Genuine Maruti Suzuki parts and accessories in Srinagar, J&K. Browse categories and trending parts at AS Automobiles.",
+          "Shop genuine Maruti Suzuki spare parts and accessories at AS Automobiles, Tengpora, Srinagar. OEM brakes, filters, batteries, lights and more with fast WhatsApp inquiries.",
       },
-      { property: "og:title", content: "AS Automobiles" },
+      { property: "og:title", content: "AS Automobiles - Genuine Maruti Suzuki Spare Parts" },
       {
         property: "og:description",
-        content: "Genuine Maruti Suzuki parts & accessories — Tengpora, Srinagar.",
+        content:
+          "Genuine Maruti Suzuki parts & accessories in Tengpora, Srinagar, Kashmir. OEM quality, trusted service.",
       },
+      { property: "og:url", content: "https://as-automotive.lovable.app/" },
+      { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://as-automotive.lovable.app/og-hero.jpg" },
+      { name: "twitter:image", content: "https://as-automotive.lovable.app/og-hero.jpg" },
     ],
+    links: [{ rel: "canonical", href: "https://as-automotive.lovable.app/" }],
   }),
   component: Index,
 });
