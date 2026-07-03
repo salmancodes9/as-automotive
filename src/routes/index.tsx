@@ -15,10 +15,10 @@ import heroCar3 from "@/assets/hero-car-3.jpg";
 import heroOemParts from "@/assets/hero-oem-parts.jpg";
 
 const HERO_SLIDES: { src: string; label: string; oem?: boolean }[] = [
-  { src: heroCar1, label: "Maruti Suzuki car" },
-  { src: heroOemParts, label: "Genuine OEM Maruti Suzuki parts", oem: true },
-  { src: heroCar2, label: "Maruti Suzuki car" },
-  { src: heroCar3, label: "Maruti Suzuki car" },
+  { src: heroCar1, label: "Maruti Suzuki car serviced at AS Automobiles, Srinagar" },
+  { src: heroOemParts, label: "Genuine OEM Maruti Suzuki spare parts collection", oem: true },
+  { src: heroCar2, label: "Maruti Suzuki hatchback showcased with genuine parts" },
+  { src: heroCar3, label: "Maruti Suzuki sedan alongside authentic accessories" },
 ];
 
 function iconForCategory(name: string) {
@@ -307,7 +307,7 @@ function AccessoryCard({ a, hot }: { a: Accessory; hot?: boolean }) {
           // eslint-disable-next-line jsx-a11y/alt-text
           <img
             src={a.image_url}
-            alt={a.name}
+            alt={`${a.name}${a.is_oem ? " - Genuine OEM Maruti Suzuki part" : " - Maruti Suzuki spare part"} at AS Automobiles`}
             className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
             loading="lazy"
           />
