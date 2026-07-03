@@ -65,8 +65,6 @@ export const Route = createFileRoute("/")({
       },
       { property: "og:url", content: "https://as-automotive.lovable.app/" },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: "https://as-automotive.lovable.app/og-hero.jpg" },
-      { name: "twitter:image", content: "https://as-automotive.lovable.app/og-hero.jpg" },
     ],
     links: [{ rel: "canonical", href: "https://as-automotive.lovable.app/" }],
   }),
