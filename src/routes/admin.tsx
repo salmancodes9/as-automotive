@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
+import { X, Search, Trash2, Edit2, Check, AlertCircle, Image as ImageIcon, Plus } from "lucide-react";
 import {
   verifyPasscode,
   createCategory,
@@ -61,13 +62,15 @@ function PasscodeGate({ onUnlock }: { onUnlock: (p: string) => void }) {
   const verify = useServerFn(verifyPasscode);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-linear-to-br from-background to-muted">
       <Header />
       <div className="mx-auto mt-24 max-w-sm px-5">
-        <h1 className="text-xl font-semibold text-foreground">Admin sign in</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Enter the admin passcode to manage the catalog.</p>
+        <div className="space-y-2 text-center mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
+          <p className="text-muted-foreground">Manage products and categories</p>
+        </div>
         <form
-          className="mt-6 space-y-3"
+          className="space-y-4 rounded-lg border border-border bg-card p-6 shadow-sm"
           onSubmit={async (e) => {
             e.preventDefault();
             setErr(null);
@@ -83,21 +86,29 @@ function PasscodeGate({ onUnlock }: { onUnlock: (p: string) => void }) {
             }
           }}
         >
-          <input
-            type="password"
-            autoFocus
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder="Passcode"
-            className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none focus:border-primary"
-          />
-          {err && <p className="text-xs text-destructive">{err}</p>}
+          <div>
+            <label className="block text-sm font-medium mb-1">Admin Passcode</label>
+            <input
+              type="password"
+              autoFocus
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="••••••"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          {err && (
+            <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {err}
+            </div>
+          )}
           <button
             type="submit"
             disabled={busy || !value}
-            className="w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            className="w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
           >
-            {busy ? "Checking…" : "Unlock"}
+            {busy ? "Verifying…" : "Sign In"}
           </button>
         </form>
       </div>
@@ -107,6 +118,10 @@ function PasscodeGate({ onUnlock }: { onUnlock: (p: string) => void }) {
 
 function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: () => void }) {
   const qc = useQueryClient();
+  const [tab, setTab] = useState<"products" | "categories">("products");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [editingAccessory, setEditingAccessory] = useState<Accessory | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const { data: categories = [] } = useQuery({
     queryKey: ["admin-categories"],
@@ -129,6 +144,13 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
     },
   });
 
+  const filteredAccessories = useMemo(() => {
+    return accessories.filter(a => 
+      a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (a.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+    );
+  }, [accessories, searchTerm]);
+
   const addCat = useServerFn(createCategory);
   const delCat = useServerFn(deleteCategory);
   const addAcc = useServerFn(createAccessory);
@@ -143,20 +165,8 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
     qc.invalidateQueries({ queryKey: ["accessories"] });
   };
 
-  // category form
   const [catName, setCatName] = useState("");
-
-  // accessory form
-  const [aName, setAName] = useState("");
-  const [aPrice, setAPrice] = useState("");
-  const [aImg, setAImg] = useState("");
-  const [aExtra, setAExtra] = useState<string[]>([]);
-  const [aDesc, setADesc] = useState("");
-  const [aCat, setACat] = useState("");
-  const [aTrend, setATrend] = useState(false);
-  const [aOem, setAOem] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadingExtra, setUploadingExtra] = useState(false);
+  const [catErr, setCatErr] = useState("");
 
   async function uploadFile(file: File): Promise<string> {
     if (file.size > 5 * 1024 * 1024) {
@@ -178,328 +188,660 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
     return res.url;
   }
 
-  async function handleFilePick(file: File) {
-    setUploading(true);
-    try {
-      setAImg(await uploadFile(file));
-    } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Upload failed");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function handleExtraPick(file: File) {
-    if (aExtra.length >= 3) {
-      alert("You can add up to 3 extra images (4 total).");
-      return;
-    }
-    setUploadingExtra(true);
-    try {
-      const url = await uploadFile(file);
-      setAExtra((cur) => [...cur, url]);
-    } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Upload failed");
-    } finally {
-      setUploadingExtra(false);
-    }
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="mx-auto max-w-4xl px-5 py-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-foreground">Admin</h1>
-          <button onClick={onLogout} className="text-xs text-muted-foreground hover:text-primary">
+      <main className="mx-auto max-w-6xl px-5 py-8">
+        {/* Header */}
+        <div className="flex flex-col justify-between items-start md:items-center md:flex-row gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Product Management</h1>
+            <p className="text-sm text-muted-foreground mt-1">Manage categories and products for your store</p>
+          </div>
+          <button 
+            onClick={onLogout} 
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
             Sign out
           </button>
         </div>
 
-        {/* Categories */}
-        <section className="mt-8 rounded-xl border border-border bg-card p-5">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-            Categories
-          </h2>
-          <form
-            className="mt-3 flex gap-2"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!catName.trim()) return;
-              const slug = catName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-              try {
-                await addCat({ data: { passcode, name: catName.trim(), slug } });
-                setCatName("");
-                refresh();
-              } catch (e: unknown) {
-                alert(e instanceof Error ? e.message : "Failed");
-              }
-            }}
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-border">
+          <button
+            onClick={() => setTab("products")}
+            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+              tab === "products"
+                ? "text-primary border-primary"
+                : "text-muted-foreground border-transparent hover:text-foreground"
+            }`}
           >
-            <input
-              value={catName}
-              onChange={(e) => setCatName(e.target.value)}
-              placeholder="New category name"
-              className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-            />
-            <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
-              Add
-            </button>
-          </form>
-          <ul className="mt-4 divide-y divide-border">
-            {categories.length === 0 && (
-              <li className="py-3 text-sm text-muted-foreground">No categories yet.</li>
-            )}
-            {categories.map((c) => (
-              <li key={c.id} className="flex items-center justify-between py-2 text-sm">
-                <span>{c.name}</span>
-                <button
-                  onClick={async () => {
-                    if (!confirm(`Delete "${c.name}"?`)) return;
-                    try {
-                      await delCat({ data: { passcode, id: c.id } });
-                      refresh();
-                    } catch (e: unknown) {
-                      alert(e instanceof Error ? e.message : "Failed");
-                    }
-                  }}
-                  className="text-xs text-destructive hover:underline"
-                >
-                  Delete
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
+            Products ({accessories.length})
+          </button>
+          <button
+            onClick={() => setTab("categories")}
+            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+              tab === "categories"
+                ? "text-primary border-primary"
+                : "text-muted-foreground border-transparent hover:text-foreground"
+            }`}
+          >
+            Categories ({categories.length})
+          </button>
+        </div>
 
-        {/* Accessories */}
-        <section className="mt-6 rounded-xl border border-border bg-card p-5">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-            Accessories
-          </h2>
-          <form
-            className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!aName.trim()) return;
-              try {
-                await addAcc({
-                  data: {
-                    passcode,
-                    name: aName.trim(),
-                    description: aDesc.trim() || null,
-                    price: aPrice ? Number(aPrice) : null,
-                    image_url: aImg.trim() || null,
-                    category_id: aCat || null,
-                    is_trending: aTrend,
-                    is_oem: aOem,
-                    images: aExtra,
-                  },
-                });
-                setAName(""); setAPrice(""); setAImg(""); setADesc(""); setACat(""); setATrend(false); setAOem(false); setAExtra([]);
-                refresh();
-              } catch (e: unknown) {
-                alert(e instanceof Error ? e.message : "Failed");
-              }
-            }}
-          >
-            <input value={aName} onChange={(e) => setAName(e.target.value)} placeholder="Name" className="rounded-md border border-input bg-background px-3 py-2 text-sm" />
-            <input value={aPrice} onChange={(e) => setAPrice(e.target.value)} placeholder="Price (₹)" type="number" className="rounded-md border border-input bg-background px-3 py-2 text-sm" />
-            <div className="sm:col-span-2 space-y-2">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm hover:border-primary/40">
+        {/* Categories Tab */}
+        {tab === "categories" && (
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="rounded-lg border border-border bg-card p-6">
+              <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                <span className="w-1 h-6 bg-primary rounded-full"></span>
+                Add New Category
+              </h2>
+              <form
+                className="space-y-4"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setCatErr("");
+                  if (!catName.trim()) {
+                    setCatErr("Category name is required");
+                    return;
+                  }
+                  const slug = catName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+                  try {
+                    await addCat({ data: { passcode, name: catName.trim(), slug } });
+                    setCatName("");
+                    refresh();
+                  } catch (e: unknown) {
+                    setCatErr(e instanceof Error ? e.message : "Failed to add category");
+                  }
+                }}
+              >
+                <div>
+                  <label className="block text-sm font-medium mb-1">Category Name</label>
                   <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleFilePick(f);
-                      e.currentTarget.value = "";
-                    }}
+                    value={catName}
+                    onChange={(e) => { setCatName(e.target.value); setCatErr(""); }}
+                    placeholder="e.g., Brake System, Engine Parts"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   />
-                  {uploading ? "Uploading…" : "📷 Upload from gallery"}
-                </label>
-                <span className="text-xs text-muted-foreground">or paste image URL below</span>
-              </div>
-              <input
-                value={aImg}
-                onChange={(e) => setAImg(e.target.value)}
-                placeholder="Image URL"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
-              {aImg && (
-                <div className="h-20 w-20 overflow-hidden rounded border border-border bg-muted">
-                  <img src={aImg} alt="" className="h-full w-full object-cover" />
+                  <p className="text-xs text-muted-foreground mt-1">Used to organize products on the website</p>
                 </div>
-              )}
-              <div className="rounded-md border border-dashed border-input p-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Extra images ({aExtra.length}/3)
-                  </p>
-                  <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-input bg-background px-2.5 py-1 text-xs hover:border-primary/40">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      disabled={uploadingExtra || aExtra.length >= 3}
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) handleExtraPick(f);
-                        e.currentTarget.value = "";
-                      }}
-                    />
-                    {uploadingExtra ? "Uploading…" : "＋ Add image"}
-                  </label>
-                </div>
-                {aExtra.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {aExtra.map((u, i) => (
-                      <div key={u} className="relative">
-                        <div className="h-16 w-16 overflow-hidden rounded border border-border bg-muted">
-                          <img src={u} alt="" className="h-full w-full object-cover" />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setAExtra((cur) => cur.filter((_, j) => j !== i))}
-                          className="absolute -right-1.5 -top-1.5 h-5 w-5 rounded-full bg-destructive text-[10px] font-bold text-white"
-                          aria-label="Remove"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
+                {catErr && (
+                  <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 px-2 py-1.5 rounded">
+                    <AlertCircle className="h-3 w-3 shrink-0" /> {catErr}
                   </div>
                 )}
+                <button
+                  type="submit"
+                  className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                  Add Category
+                </button>
+              </form>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card p-6">
+              <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                <span className="w-1 h-6 bg-primary rounded-full"></span>
+                Existing Categories
+              </h2>
+              <ul className="space-y-2">
+                {categories.length === 0 && (
+                  <li className="py-3 text-sm text-muted-foreground">No categories yet. Create one to get started.</li>
+                )}
+                {categories.map((c) => (
+                  <li key={c.id} className="flex items-center justify-between p-2 rounded border border-border hover:bg-muted/50 transition-colors">
+                    <span className="text-sm font-medium">{c.name}</span>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`Delete category "${c.name}"? Products in this category won't be deleted.`)) return;
+                        try {
+                          await delCat({ data: { passcode, id: c.id } });
+                          refresh();
+                        } catch (e: unknown) {
+                          alert(e instanceof Error ? e.message : "Failed");
+                        }
+                      }}
+                      className="text-xs px-2 py-1 rounded text-destructive hover:bg-destructive/10 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Products Tab */}
+        {tab === "products" && (
+          <div className="space-y-6">
+            {/* Add Product Section */}
+            <div className="rounded-lg border border-border bg-card p-6">
+              <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                <span className="w-1 h-6 bg-primary rounded-full"></span>
+                Add New Product
+              </h2>
+              <AddProductForm 
+                passcode={passcode} 
+                categories={categories} 
+                uploadFile={uploadFile}
+                onSuccess={() => { refresh(); setSearchTerm(""); }}
+              />
+            </div>
+
+            {/* Product List Section */}
+            <div className="rounded-lg border border-border bg-card p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+                <h2 className="font-semibold text-lg">Products ({filteredAccessories.length})</h2>
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search by name or description..."
+                    className="w-full pl-9 pr-3 py-2 rounded-md border border-input bg-background text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              {filteredAccessories.length === 0 && accessories.length === 0 && (
+                <div className="py-8 text-center text-muted-foreground">
+                  <p className="text-sm">No products yet. Add one above!</p>
+                </div>
+              )}
+
+              {filteredAccessories.length === 0 && accessories.length > 0 && (
+                <div className="py-8 text-center text-muted-foreground">
+                  <p className="text-sm">No products match your search.</p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                {filteredAccessories.map((a) => (
+                  <ProductListItem
+                    key={a.id}
+                    accessory={a}
+                    categories={categories}
+                    passcode={passcode}
+                    onEdit={() => { setEditingAccessory(a); setIsEditModalOpen(true); }}
+                    onUpdate={() => refresh()}
+                    onDelete={() => refresh()}
+                    uploadFile={uploadFile}
+                  />
+                ))}
               </div>
             </div>
-            <input value={aDesc} onChange={(e) => setADesc(e.target.value)} placeholder="Description (optional)" className="rounded-md border border-input bg-background px-3 py-2 text-sm sm:col-span-2" />
-            <select value={aCat} onChange={(e) => setACat(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2 text-sm">
-              <option value="">— Select category —</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-            <div className="flex items-center gap-4 text-sm">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" checked={aTrend} onChange={(e) => setATrend(e.target.checked)} />
-                Trending / Hot
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" checked={aOem} onChange={(e) => setAOem(e.target.checked)} />
-                OEM
-              </label>
-            </div>
-            <button className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground sm:col-span-2">
-              Add accessory
-            </button>
-          </form>
 
-          <ul className="mt-4 divide-y divide-border">
-            {accessories.length === 0 && (
-              <li className="py-3 text-sm text-muted-foreground">No accessories yet.</li>
+            {/* Edit Modal */}
+            {isEditModalOpen && editingAccessory && (
+              <EditProductModal
+                product={editingAccessory}
+                categories={categories}
+                passcode={passcode}
+                uploadFile={uploadFile}
+                onClose={() => { setIsEditModalOpen(false); setEditingAccessory(null); }}
+                onSave={() => { refresh(); setIsEditModalOpen(false); setEditingAccessory(null); }}
+              />
             )}
-            {accessories.map((a) => (
-              <li key={a.id} className="flex flex-wrap items-center gap-3 py-3 text-sm">
-                <div className="h-10 w-10 shrink-0 overflow-hidden rounded bg-muted">
-                  {a.image_url && <img src={a.image_url} alt="" className="h-full w-full object-cover" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{a.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {a.price != null ? `₹${Number(a.price).toLocaleString("en-IN")}` : "—"}
-                    {a.is_trending && <span className="ml-2 text-accent">🔥 Hot</span>}
-                    {a.is_oem && <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">OEM</span>}
-                    <span className="ml-2">📷 {1 + (a.images?.length ?? 0)} image{1 + (a.images?.length ?? 0) === 1 ? "" : "s"}</span>
-                  </p>
-                </div>
-                <label className="cursor-pointer text-xs text-primary hover:underline">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const f = e.target.files?.[0];
-                      e.currentTarget.value = "";
-                      if (!f) return;
-                      const cur = a.images ?? [];
-                      if (cur.length >= 3) {
-                        alert("Up to 3 extra images (4 total).");
-                        return;
-                      }
-                      try {
-                        const url = await uploadFile(f);
-                        await updAcc({ data: { passcode, id: a.id, images: [...cur, url] } });
-                        refresh();
-                      } catch (err: unknown) {
-                        alert(err instanceof Error ? err.message : "Failed");
-                      }
-                    }}
-                  />
-                  + Image
-                </label>
-                {(a.images?.length ?? 0) > 0 && (
-                  <button
-                    onClick={async () => {
-                      if (!confirm("Remove all extra images?")) return;
-                      try {
-                        await updAcc({ data: { passcode, id: a.id, images: [] } });
-                        refresh();
-                      } catch (err: unknown) {
-                        alert(err instanceof Error ? err.message : "Failed");
-                      }
-                    }}
-                    className="text-xs text-muted-foreground hover:text-destructive hover:underline"
-                  >
-                    Clear extras
-                  </button>
-                )}
-                <button
-                  onClick={async () => {
-                    try {
-                      await updAcc({ data: { passcode, id: a.id, is_oem: !a.is_oem } });
-                      refresh();
-                    } catch (e: unknown) {
-                      alert(e instanceof Error ? e.message : "Failed");
-                    }
-                  }}
-                  className="text-xs text-primary hover:underline"
-                >
-                  {a.is_oem ? "Remove OEM" : "Mark OEM"}
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      await updAcc({ data: { passcode, id: a.id, is_trending: !a.is_trending } });
-                      refresh();
-                    } catch (e: unknown) {
-                      alert(e instanceof Error ? e.message : "Failed");
-                    }
-                  }}
-                  className="text-xs text-primary hover:underline"
-                >
-                  {a.is_trending ? "Unmark" : "Mark hot"}
-                </button>
-                <button
-                  onClick={async () => {
-                    if (!confirm(`Delete "${a.name}"?`)) return;
-                    try {
-                      await delAcc({ data: { passcode, id: a.id } });
-                      refresh();
-                    } catch (e: unknown) {
-                      alert(e instanceof Error ? e.message : "Failed");
-                    }
-                  }}
-                  className="text-xs text-destructive hover:underline"
-                >
-                  Delete
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
+          </div>
+        )}
       </main>
+    </div>
+  );
+}
+
+function AddProductForm({ passcode, categories, uploadFile, onSuccess }: {
+  passcode: string;
+  categories: Category[];
+  uploadFile: (file: File) => Promise<string>;
+  onSuccess: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: "",
+    price: "",
+    description: "",
+    category_id: "",
+    is_trending: false,
+    is_oem: false,
+    image_url: "",
+    images: [] as string[],
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [uploading, setUploading] = useState(false);
+  const [uploadingExtra, setUploadingExtra] = useState(false);
+  
+  const addAcc = useServerFn(createAccessory);
+  const upImg = useServerFn(uploadProductImage);
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!form.name.trim()) newErrors.name = "Product name is required";
+    if (form.name.trim().length < 3) newErrors.name = "Product name must be at least 3 characters";
+    if (form.price && Number(form.price) < 0) newErrors.price = "Price cannot be negative";
+    return newErrors;
+  };
+
+  const handleImageUpload = async (file: File, isExtra: boolean) => {
+    if (isExtra) setUploadingExtra(true);
+    else setUploading(true);
+    try {
+      const url = await uploadFile(file);
+      if (isExtra) {
+        if (form.images.length < 3) {
+          setForm(f => ({ ...f, images: [...f.images, url] }));
+        } else {
+          alert("Maximum 3 extra images allowed");
+        }
+      } else {
+        setForm(f => ({ ...f, image_url: url }));
+      }
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      if (isExtra) setUploadingExtra(false);
+      else setUploading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const newErrors = validateForm();
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    try {
+      await addAcc({
+        data: {
+          passcode,
+          name: form.name.trim(),
+          description: form.description.trim() || null,
+          price: form.price ? Number(form.price) : null,
+          image_url: form.image_url.trim() || null,
+          category_id: form.category_id || null,
+          is_trending: form.is_trending,
+          is_oem: form.is_oem,
+          images: form.images,
+        },
+      });
+      setForm({
+        name: "",
+        price: "",
+        description: "",
+        category_id: "",
+        is_trending: false,
+        is_oem: false,
+        image_url: "",
+        images: [],
+      });
+      setErrors({});
+      onSuccess();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Failed to add product");
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Product Name *</label>
+          <input
+            value={form.name}
+            onChange={(e) => { setForm(f => ({ ...f, name: e.target.value })); setErrors(e => ({ ...e, name: "" })); }}
+            placeholder="e.g., Brake Pads Set, Oil Filter"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          />
+          {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+          <p className="text-xs text-muted-foreground mt-1">Be specific and descriptive</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Price (₹)</label>
+          <input
+            value={form.price}
+            onChange={(e) => { setForm(f => ({ ...f, price: e.target.value })); setErrors(e => ({ ...e, price: "" })); }}
+            type="number"
+            placeholder="0"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+          />
+          {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Category</label>
+        <select
+          value={form.category_id}
+          onChange={(e) => setForm(f => ({ ...f, category_id: e.target.value }))}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+        >
+          <option value="">Select a category...</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+        <p className="text-xs text-muted-foreground mt-1">Helps customers find your product</p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Description</label>
+        <textarea
+          value={form.description}
+          onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
+          placeholder="Add product details like fitment, specifications, warranty info, etc."
+          rows={3}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+        />
+        <p className="text-xs text-muted-foreground mt-1">Help customers understand what they're buying</p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium">Main Product Image</label>
+        <div className="flex gap-2">
+          <label className="flex-1 cursor-pointer rounded-md border-2 border-dashed border-input hover:border-primary px-4 py-3 text-center transition-colors">
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f, false); e.currentTarget.value = ""; }}
+            />
+            <div className="text-sm">
+              {uploading ? "Uploading..." : "📷 Click to upload or paste URL"}
+            </div>
+          </label>
+        </div>
+        {form.image_url && (
+          <div className="flex gap-2 items-start">
+            <img src={form.image_url} alt="preview" className="h-20 w-20 rounded object-cover border border-border" />
+            <div className="flex-1">
+              <p className="text-xs font-mono text-muted-foreground break-all">{form.image_url}</p>
+              <button type="button" onClick={() => setForm(f => ({ ...f, image_url: "" }))} className="text-xs text-destructive hover:underline mt-1">Remove</button>
+            </div>
+          </div>
+        )}
+        <input
+          value={form.image_url}
+          onChange={(e) => setForm(f => ({ ...f, image_url: e.target.value }))}
+          placeholder="Or paste image URL here..."
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+        />
+        <p className="text-xs text-muted-foreground">💡 Tip: Use JPG or WebP format for smaller file sizes and faster loading</p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium">Extra Images (Gallery)</label>
+        <p className="text-xs text-muted-foreground">Add up to 3 more images to showcase the product from different angles</p>
+        <label className="cursor-pointer inline-flex items-center gap-2 rounded-md border border-input hover:border-primary px-3 py-2 text-sm transition-colors">
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={uploadingExtra || form.images.length >= 3}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f, true); e.currentTarget.value = ""; }}
+          />
+          <Plus className="h-4 w-4" />
+          {uploadingExtra ? "Uploading..." : "Add image"}
+        </label>
+        {form.images.length > 0 && (
+          <div className="flex gap-2 flex-wrap mt-2">
+            {form.images.map((img, i) => (
+              <div key={i} className="relative">
+                <img src={img} alt={`extra ${i}`} className="h-16 w-16 rounded object-cover border border-border" />
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, j) => j !== i) }))}
+                  className="absolute -right-2 -top-2 h-5 w-5 rounded-full bg-destructive text-white text-xs flex items-center justify-center hover:bg-destructive/90"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex gap-4">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.is_oem}
+            onChange={(e) => setForm(f => ({ ...f, is_oem: e.target.checked }))}
+          />
+          <span>Genuine OEM Part</span>
+          <span className="text-xs text-muted-foreground">(Official Maruti part)</span>
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.is_trending}
+            onChange={(e) => setForm(f => ({ ...f, is_trending: e.target.checked }))}
+          />
+          <span>🔥 Trending / Hot</span>
+          <span className="text-xs text-muted-foreground">(Highlight popular items)</span>
+        </label>
+      </div>
+
+      <button
+        type="submit"
+        className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+      >
+        Add Product
+      </button>
+    </form>
+  );
+}
+
+function ProductListItem({ 
+  accessory, 
+  categories, 
+  passcode, 
+  onEdit, 
+  onUpdate, 
+  onDelete,
+  uploadFile 
+}: {
+  accessory: Accessory;
+  categories: Category[];
+  passcode: string;
+  onEdit: () => void;
+  onUpdate: () => void;
+  onDelete: () => void;
+  uploadFile: (file: File) => Promise<string>;
+}) {
+  const updAcc = useServerFn(updateAccessory);
+  const delAcc = useServerFn(deleteAccessory);
+  const catName = categories.find(c => c.id === accessory.category_id)?.name;
+
+  return (
+    <div className="flex flex-col sm:flex-row gap-4 p-4 rounded-lg border border-border hover:bg-muted/30 transition-colors">
+      <div className="shrink-0">
+        <div className="h-20 w-20 rounded-lg border border-border bg-muted overflow-hidden">
+          {accessory.image_url ? (
+            <img src={accessory.image_url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center text-muted-foreground">
+              <ImageIcon className="h-8 w-8" />
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <h3 className="font-semibold text-foreground truncate">{accessory.name}</h3>
+          <div className="flex items-center gap-1 flex-wrap justify-end">
+            {accessory.is_oem && <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">OEM</span>}
+            {accessory.is_trending && <span className="text-xs bg-accent/10 text-accent px-2 py-0.5 rounded">🔥 Hot</span>}
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{accessory.description || "No description"}</p>
+        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+          {accessory.price != null && <span>₹{Number(accessory.price).toLocaleString("en-IN")}</span>}
+          {catName && <span>📁 {catName}</span>}
+          <span>📷 {1 + (accessory.images?.length ?? 0)} image{1 + (accessory.images?.length ?? 0) !== 1 ? "s" : ""}</span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          onClick={onEdit}
+          className="inline-flex items-center gap-1 rounded-md border border-input px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+        >
+          <Edit2 className="h-4 w-4" />
+          <span className="hidden sm:inline">Edit</span>
+        </button>
+        <button
+          onClick={async () => {
+            if (!confirm(`Delete "${accessory.name}"?`)) return;
+            try {
+              await delAcc({ data: { passcode, id: accessory.id } });
+              onDelete();
+            } catch (e: unknown) {
+              alert(e instanceof Error ? e.message : "Failed");
+            }
+          }}
+          className="inline-flex items-center gap-1 rounded-md border border-destructive/50 text-destructive px-3 py-1.5 text-sm hover:bg-destructive/10 transition-colors"
+        >
+          <Trash2 className="h-4 w-4" />
+          <span className="hidden sm:inline">Delete</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EditProductModal({ 
+  product, 
+  categories, 
+  passcode, 
+  uploadFile,
+  onClose, 
+  onSave 
+}: {
+  product: Accessory;
+  categories: Category[];
+  passcode: string;
+  uploadFile: (file: File) => Promise<string>;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  const [form, setForm] = useState({ ...product });
+  const [uploading, setUploading] = useState(false);
+  const updAcc = useServerFn(updateAccessory);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updAcc({
+        data: {
+          passcode,
+          id: product.id,
+          name: form.name.trim(),
+          description: form.description?.trim() || null,
+          price: form.price ? Number(form.price) : null,
+          image_url: form.image_url?.trim() || null,
+          category_id: form.category_id || null,
+          is_trending: form.is_trending,
+          is_oem: form.is_oem,
+          images: form.images || [],
+        },
+      });
+      onSave();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Failed to update product");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-card rounded-lg max-w-2xl w-full max-h-screen overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card">
+          <h2 className="text-lg font-semibold">Edit Product</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Product Name</label>
+            <input
+              value={form.name}
+              onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Price (₹)</label>
+              <input
+                value={form.price || ""}
+                onChange={(e) => setForm(f => ({ ...f, price: e.target.value ? Number(e.target.value) : null }))}
+                type="number"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Category</label>
+              <select
+                value={form.category_id || ""}
+                onChange={(e) => setForm(f => ({ ...f, category_id: e.target.value || null }))}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              >
+                <option value="">Select category...</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Description</label>
+            <textarea
+              value={form.description || ""}
+              onChange={(e) => setForm(f => ({ ...f, description: e.target.value || null }))}
+              rows={3}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
+            />
+          </div>
+
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.is_oem}
+                onChange={(e) => setForm(f => ({ ...f, is_oem: e.target.checked }))}
+              />
+              Genuine OEM
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.is_trending}
+                onChange={(e) => setForm(f => ({ ...f, is_trending: e.target.checked }))}
+              />
+              Trending / Hot
+            </label>
+          </div>
+
+          <div className="flex gap-2 pt-4 border-t border-border">
+            <button type="button" onClick={onClose} className="flex-1 rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-muted transition-colors">
+              Cancel
+            </button>
+            <button type="submit" className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+              <Check className="h-4 w-4" />
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

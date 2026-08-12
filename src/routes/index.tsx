@@ -130,7 +130,7 @@ function Index() {
       <main className="mx-auto max-w-5xl px-5 pb-10 pt-5">
         {/* Hero carousel */}
         <section className="relative overflow-hidden rounded-2xl bg-primary">
-          <div className="relative aspect-[16/10] w-full sm:aspect-[21/9]">
+          <div className="relative aspect-16/10 w-full sm:aspect-21/9">
             {HERO_SLIDES.map((s, i) => (
               <img
                 key={s.src}
@@ -150,7 +150,7 @@ function Index() {
                 Genuine OEM
               </span>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-primary/85 via-primary/30 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-primary/85 via-primary/30 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
                 AS Automobiles · Srinagar

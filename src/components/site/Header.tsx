@@ -11,7 +11,7 @@ export function Header() {
               Maruti Suzuki · Parts
             </span>
             <span className="mt-0.5 text-base font-extrabold tracking-[0.18em] text-primary">
-              AS&nbsp;AUTOMOBILES
+              AS&nbsp;AUTOMOTIVE
             </span>
           </div>
         </Link>
