@@ -1,18 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
-
+ 
 function checkPasscode(passcode: string) {
   const expected = process.env.ADMIN_PASSCODE;
   if (!expected) throw new Error("Admin passcode is not configured on the server.");
   if (passcode !== expected) throw new Error("Invalid passcode.");
 }
-
+ 
 export const verifyPasscode = createServerFn({ method: "POST" })
   .inputValidator((input: { passcode: string }) => input)
   .handler(async ({ data }) => {
     checkPasscode(data.passcode);
     return { ok: true };
   });
-
+ 
 export const createCategory = createServerFn({ method: "POST" })
   .inputValidator((input: { passcode: string; name: string; slug: string; sort_order?: number }) => input)
   .handler(async ({ data }) => {
@@ -26,7 +26,7 @@ export const createCategory = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return row;
   });
-
+ 
 export const deleteCategory = createServerFn({ method: "POST" })
   .inputValidator((input: { passcode: string; id: string }) => input)
   .handler(async ({ data }) => {
@@ -36,7 +36,7 @@ export const deleteCategory = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-
+ 
 export const createAccessory = createServerFn({ method: "POST" })
   .inputValidator((input: {
     passcode: string;
@@ -69,7 +69,7 @@ export const createAccessory = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return row;
   });
-
+ 
 export const updateAccessory = createServerFn({ method: "POST" })
   .inputValidator((input: {
     passcode: string;
@@ -97,7 +97,7 @@ export const updateAccessory = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return row;
   });
-
+ 
 export const deleteAccessory = createServerFn({ method: "POST" })
   .inputValidator((input: { passcode: string; id: string }) => input)
   .handler(async ({ data }) => {
@@ -107,9 +107,15 @@ export const deleteAccessory = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-
-const TEN_YEARS_SECONDS = 60 * 60 * 24 * 365 * 10;
-
+ 
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB
+ 
 export const uploadProductImage = createServerFn({ method: "POST" })
   .inputValidator((input: {
     passcode: string;
@@ -119,17 +125,32 @@ export const uploadProductImage = createServerFn({ method: "POST" })
   }) => input)
   .handler(async ({ data }) => {
     checkPasscode(data.passcode);
+ 
+    if (!ALLOWED_IMAGE_TYPES.has(data.contentType)) {
+      throw new Error("Unsupported image type. Please upload a JPG, PNG, WEBP, or GIF.");
+    }
+ 
+    let bytes: Uint8Array;
+    try {
+      bytes = Uint8Array.from(atob(data.dataBase64), (c) => c.charCodeAt(0));
+    } catch {
+      throw new Error("The uploaded file could not be read. Please try a different image.");
+    }
+    if (bytes.byteLength > MAX_UPLOAD_BYTES) {
+      throw new Error("Image must be under 5 MB.");
+    }
+ 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const bytes = Uint8Array.from(atob(data.dataBase64), (c) => c.charCodeAt(0));
     const safeName = data.filename.replace(/[^a-zA-Z0-9._-]/g, "_");
     const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
+ 
     const { error: upErr } = await supabaseAdmin.storage
       .from("product-images")
       .upload(path, bytes, { contentType: data.contentType, upsert: false });
     if (upErr) throw new Error(upErr.message);
-    const { data: signed, error: signErr } = await supabaseAdmin.storage
-      .from("product-images")
-      .createSignedUrl(path, TEN_YEARS_SECONDS);
-    if (signErr || !signed) throw new Error(signErr?.message ?? "Failed to sign URL");
-    return { url: signed.signedUrl, path };
+ 
+    // Bucket is public, so a plain public URL is all we need — no signed
+    // token to expire or go invalid.
+    const { data: pub } = supabaseAdmin.storage.from("product-images").getPublicUrl(path);
+    return { url: pub.publicUrl, path };
   });
