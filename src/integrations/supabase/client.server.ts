@@ -7,8 +7,7 @@ import type { Database } from './types';
 
 function createSupabaseAdminClient() {
   // .trim() guards against a common deploy mistake: pasting env vars with a
-  // trailing newline/space in the hosting dashboard, which turns the key
-  // into an invalid JWT and surfaces later as a cryptic "Invalid Compact JWS".
+  // trailing newline or space in the hosting dashboard.
   const SUPABASE_URL = process.env.SUPABASE_URL?.trim();
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
@@ -22,15 +21,8 @@ function createSupabaseAdminClient() {
     throw new Error(message);
   }
 
-  if (SUPABASE_SERVICE_ROLE_KEY.split('.').length !== 3) {
-    const message =
-      'SUPABASE_SERVICE_ROLE_KEY is not a valid JWT (expected 3 dot-separated parts). ' +
-      'Re-copy the service role key from Supabase → Project Settings → API, and make sure ' +
-      'no quotes or extra whitespace were included when setting it on your host.';
-    console.error(`[Supabase] ${message}`);
-    throw new Error(message);
-  }
-
+  // Supabase supports both legacy JWT service-role keys and newer sb_secret
+  // keys. The Supabase client validates the supplied key with the API.
   return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: {
       storage: undefined,
