@@ -6,8 +6,11 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 function createSupabaseAdminClient() {
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // .trim() guards against a common deploy mistake: pasting env vars with a
+  // trailing newline/space in the hosting dashboard, which turns the key
+  // into an invalid JWT and surfaces later as a cryptic "Invalid Compact JWS".
+  const SUPABASE_URL = process.env.SUPABASE_URL?.trim();
+  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     const missing = [
@@ -15,6 +18,15 @@ function createSupabaseAdminClient() {
       ...(!SUPABASE_SERVICE_ROLE_KEY ? ['SUPABASE_SERVICE_ROLE_KEY'] : []),
     ];
     const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
+    console.error(`[Supabase] ${message}`);
+    throw new Error(message);
+  }
+
+  if (SUPABASE_SERVICE_ROLE_KEY.split('.').length !== 3) {
+    const message =
+      'SUPABASE_SERVICE_ROLE_KEY is not a valid JWT (expected 3 dot-separated parts). ' +
+      'Re-copy the service role key from Supabase → Project Settings → API, and make sure ' +
+      'no quotes or extra whitespace were included when setting it on your host.';
     console.error(`[Supabase] ${message}`);
     throw new Error(message);
   }
