@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { X, Search, Trash2, Edit2, Check, AlertCircle, Image as ImageIcon, Plus } from "lucide-react";
+import { toast } from "sonner";
 import {
   verifyPasscode,
   createCategory,
@@ -168,9 +169,41 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
   const [catName, setCatName] = useState("");
   const [catErr, setCatErr] = useState("");
 
-  async function uploadFile(file: File): Promise<string> {
+  // Resizes large images in the browser (max 1600px on the long edge, JPEG
+  // quality 0.85) before upload. Keeps original if it's already small/simple
+  // (e.g. GIFs), so animations aren't broken.
+  async function compressImage(file: File): Promise<File> {
+    if (file.type === "image/gif" || file.size < 400 * 1024) return file;
+    try {
+      const bitmap = await createImageBitmap(file);
+      const maxDim = 1600;
+      const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+      const w = Math.round(bitmap.width * scale);
+      const h = Math.round(bitmap.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return file;
+      ctx.drawImage(bitmap, 0, 0, w, h);
+      const blob: Blob | null = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.85)
+      );
+      if (!blob) return file;
+      return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
+    } catch {
+      // If the browser can't decode/compress it, fall back to the original file.
+      return file;
+    }
+  }
+
+  async function uploadFile(rawFile: File): Promise<string> {
+    if (rawFile.size > 15 * 1024 * 1024) {
+      throw new Error("Image must be under 15 MB.");
+    }
+    const file = await compressImage(rawFile);
     if (file.size > 5 * 1024 * 1024) {
-      throw new Error("Image must be under 5 MB.");
+      throw new Error("Image is still too large after compression. Try a smaller photo.");
     }
     const buf = await file.arrayBuffer();
     let binary = "";
@@ -300,7 +333,7 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
                           await delCat({ data: { passcode, id: c.id } });
                           refresh();
                         } catch (e: unknown) {
-                          alert(e instanceof Error ? e.message : "Failed");
+                          toast.error(e instanceof Error ? e.message : "Failed");
                         }
                       }}
                       className="text-xs px-2 py-1 rounded text-destructive hover:bg-destructive/10 transition-colors"
@@ -432,13 +465,13 @@ function AddProductForm({ passcode, categories, uploadFile, onSuccess }: {
         if (form.images.length < 3) {
           setForm(f => ({ ...f, images: [...f.images, url] }));
         } else {
-          alert("Maximum 3 extra images allowed");
+          toast.error("Maximum 3 extra images allowed");
         }
       } else {
         setForm(f => ({ ...f, image_url: url }));
       }
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Upload failed");
+      toast.error(e instanceof Error ? e.message : "Upload failed");
     } finally {
       if (isExtra) setUploadingExtra(false);
       else setUploading(false);
@@ -479,7 +512,7 @@ function AddProductForm({ passcode, categories, uploadFile, onSuccess }: {
       setErrors({});
       onSuccess();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Failed to add product");
+      toast.error(e instanceof Error ? e.message : "Failed to add product");
     }
   };
 
@@ -701,7 +734,7 @@ function ProductListItem({
               await delAcc({ data: { passcode, id: accessory.id } });
               onDelete();
             } catch (e: unknown) {
-              alert(e instanceof Error ? e.message : "Failed");
+              toast.error(e instanceof Error ? e.message : "Failed");
             }
           }}
           className="inline-flex items-center gap-1 rounded-md border border-destructive/50 text-destructive px-3 py-1.5 text-sm hover:bg-destructive/10 transition-colors"
@@ -752,7 +785,7 @@ function EditProductModal({
       });
       onSave();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Failed to update product");
+      toast.error(e instanceof Error ? e.message : "Failed to update product");
     }
   };
 
