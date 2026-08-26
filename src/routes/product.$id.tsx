@@ -1,11 +1,13 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useLoaderData } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, MessageCircle, Phone, Flame } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
+import { getPublicAccessoryById } from "@/lib/public.functions";
 import {
+  SITE_URL,
   OWNER_PHONE_DISPLAY,
   OWNER_PHONE_TEL,
   whatsappInquiryUrl,
@@ -13,14 +15,11 @@ import {
 
 export const Route = createFileRoute("/product/$id")({
   loader: async ({ params }) => {
-    const { data } = await supabase
-      .from("accessories")
-      .select("name,description,image_url,is_oem,price")
-      .eq("id", params.id)
-      .maybeSingle();
-    return { product: data as { name: string; description: string | null; image_url: string | null; is_oem: boolean; price: number | null } | null };
+    const fn = getPublicAccessoryById;
+    const product = await fn({ data: { id: params.id } });
+    return { product };
   },
-  head: ({ params, loaderData }) => {
+  head: ({ loaderData }) => {
     const p = loaderData?.product;
     const name = p?.name ?? "Maruti Suzuki Part";
     const oem = p?.is_oem ? "Genuine OEM " : "Genuine ";
@@ -28,7 +27,7 @@ export const Route = createFileRoute("/product/$id")({
     const description = p?.description
       ? p.description.slice(0, 155)
       : `Buy ${oem.toLowerCase()}Maruti Suzuki ${name} from AS Automobiles in Tengpora, Srinagar. Fast WhatsApp inquiries at +91 60055 63521.`;
-    const url = `https://as-automotive.lovable.app/product/${params.id}`;
+    const url = `${SITE_URL}/product/${p?.id ?? ""}`;
     const meta: Array<Record<string, string>> = [
       { title },
       { name: "description", content: description },
@@ -44,6 +43,38 @@ export const Route = createFileRoute("/product/$id")({
     return {
       meta,
       links: [{ rel: "canonical", href: url }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: p?.name,
+            description: p?.description,
+            image: p?.image_url,
+            brand: { "@type": "Brand", name: "Maruti Suzuki" },
+            offers: p?.price
+              ? {
+                  "@type": "Offer",
+                  priceCurrency: "INR",
+                  price: p.price,
+                  availability: "https://schema.org/InStock",
+                }
+              : undefined,
+            seller: {
+              "@type": "AutoPartsStore",
+              name: "AS Automobiles",
+              address: {
+                "@type": "PostalAddress",
+                streetAddress: "Tengpora",
+                addressLocality: "Srinagar",
+                addressRegion: "Jammu & Kashmir",
+                addressCountry: "IN",
+              },
+            },
+          }),
+        },
+      ],
     };
   },
   component: ProductPage,
@@ -75,17 +106,14 @@ type Accessory = {
 
 function ProductPage() {
   const { id } = Route.useParams();
+  const { product: loaderProduct } = useLoaderData({ from: "/product/$id" });
+  const fetchProduct = useServerFn(getPublicAccessoryById);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ["product", id],
+    initialData: loaderProduct as Accessory | null,
     queryFn: async (): Promise<Accessory | null> => {
-      const { data, error } = await supabase
-        .from("accessories")
-        .select("id,name,description,price,image_url,category_id,is_trending,is_oem,images,categories(name,slug)")
-        .eq("id", id)
-        .maybeSingle();
-      if (error) throw error;
-      return (data as unknown as Accessory) ?? null;
+      return await fetchProduct({ data: { id } });
     },
   });
 
@@ -104,9 +132,19 @@ function ProductPage() {
     <div className="min-h-screen bg-background text-foreground">
       <Header />
       <main className="mx-auto max-w-4xl px-5 py-6">
-        <Link to="/" className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary">
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to catalog
-        </Link>
+        <nav className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Link to="/" className="hover:text-primary">Home</Link>
+          <span>/</span>
+          {product?.categories?.name && (
+            <>
+              <Link to="/category/$slug" params={{ slug: product.categories.slug }} className="hover:text-primary">
+                {product.categories.name}
+              </Link>
+              <span>/</span>
+            </>
+          )}
+          <span className="text-foreground font-medium line-clamp-1">{product?.name ?? "Product"}</span>
+        </nav>
 
         {isLoading || !product ? (
           <div className="mt-8 text-sm text-muted-foreground">Loading…</div>

@@ -2,12 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { X, Search, Trash2, Edit2, Check, AlertCircle, Image as ImageIcon, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   verifyPasscode,
+  getAdminCategories,
+  getAdminAccessories,
   createCategory,
   deleteCategory,
   createAccessory,
@@ -124,24 +125,22 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
   const [editingAccessory, setEditingAccessory] = useState<Accessory | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  const fetchCategories = useServerFn(getAdminCategories);
+  const fetchAccessories = useServerFn(getAdminAccessories);
+
   const { data: categories = [] } = useQuery({
     queryKey: ["admin-categories"],
     queryFn: async (): Promise<Category[]> => {
-      const { data, error } = await supabase.from("categories").select("id,name,slug").order("sort_order");
-      if (error) throw error;
-      return data ?? [];
+      const data = await fetchCategories({ data: { passcode } });
+      return data;
     },
   });
 
   const { data: accessories = [] } = useQuery({
     queryKey: ["admin-accessories"],
     queryFn: async (): Promise<Accessory[]> => {
-      const { data, error } = await supabase
-        .from("accessories")
-        .select("id,name,description,price,image_url,category_id,is_trending,is_oem,images")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Accessory[];
+      const data = await fetchAccessories({ data: { passcode } });
+      return data;
     },
   });
 
@@ -154,10 +153,6 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
 
   const addCat = useServerFn(createCategory);
   const delCat = useServerFn(deleteCategory);
-  const addAcc = useServerFn(createAccessory);
-  const updAcc = useServerFn(updateAccessory);
-  const delAcc = useServerFn(deleteAccessory);
-  const upImg = useServerFn(uploadProductImage);
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["admin-categories"] });
@@ -237,6 +232,26 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
           >
             Sign out
           </button>
+        </div>
+
+        {/* Stats Summary */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Total Products</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{accessories.length}</p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Categories</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{categories.length}</p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">OEM Parts</p>
+            <p className="text-2xl font-bold text-primary mt-1">{accessories.filter(a => a.is_oem).length}</p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Trending</p>
+            <p className="text-2xl font-bold text-accent mt-1">{accessories.filter(a => a.is_trending).length}</p>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -444,6 +459,7 @@ function AddProductForm({ passcode, categories, uploadFile, onSuccess }: {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
   const [uploadingExtra, setUploadingExtra] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   
   const addAcc = useServerFn(createAccessory);
   const upImg = useServerFn(uploadProductImage);
@@ -485,6 +501,7 @@ function AddProductForm({ passcode, categories, uploadFile, onSuccess }: {
       setErrors(newErrors);
       return;
     }
+    setSubmitting(true);
     try {
       await addAcc({
         data: {
@@ -510,9 +527,12 @@ function AddProductForm({ passcode, categories, uploadFile, onSuccess }: {
         images: [],
       });
       setErrors({});
+      toast.success("Product added successfully");
       onSuccess();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed to add product");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -660,9 +680,10 @@ function AddProductForm({ passcode, categories, uploadFile, onSuccess }: {
 
       <button
         type="submit"
-        className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        disabled={submitting || uploading || uploadingExtra}
+        className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Add Product
+        {submitting ? "Adding..." : "Add Product"}
       </button>
     </form>
   );

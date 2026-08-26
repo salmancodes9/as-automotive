@@ -1,14 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
   Wrench, Disc, Cog, Zap, Car, Filter, Lightbulb, Gauge, Sparkles,
   Wind, Droplets, CircleDot, Settings, Package, Cable, Snowflake, Wind as Exhaust,
   Fuel, CircleDashed, Cpu, SprayCan, ShieldCheck,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
+import { getPublicCategories, getPublicAccessories } from "@/lib/public.functions";
+import { SITE_URL } from "@/lib/contact";
 import heroCar1 from "@/assets/hero-car-1.jpg";
 import heroCar2 from "@/assets/hero-car-2.jpg";
 import heroCar3 from "@/assets/hero-car-3.jpg";
@@ -63,10 +65,10 @@ export const Route = createFileRoute("/")({
         content:
           "Genuine Maruti Suzuki parts & accessories in Tengpora, Srinagar, Kashmir. OEM quality, trusted service.",
       },
-      { property: "og:url", content: "https://as-automotive.lovable.app/" },
+      { property: "og:url", content: `${SITE_URL}/` },
       { property: "og:type", content: "website" },
     ],
-    links: [{ rel: "canonical", href: "https://as-automotive.lovable.app/" }],
+    links: [{ rel: "canonical", href: `${SITE_URL}/` }],
   }),
   component: Index,
 });
@@ -92,28 +94,20 @@ function Index() {
     return () => clearInterval(t);
   }, []);
 
+  const fetchCategories = useServerFn(getPublicCategories);
+  const fetchAccessories = useServerFn(getPublicAccessories);
+
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
     queryFn: async (): Promise<Category[]> => {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("id,name,slug,sort_order")
-        .order("sort_order")
-        .order("name");
-      if (error) throw error;
-      return data ?? [];
+      return await fetchCategories();
     },
   });
 
   const { data: accessories = [] } = useQuery({
     queryKey: ["accessories"],
     queryFn: async (): Promise<Accessory[]> => {
-      const { data, error } = await supabase
-        .from("accessories")
-        .select("id,name,description,price,image_url,category_id,is_trending,is_oem")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Accessory[];
+      return await fetchAccessories();
     },
   });
 
@@ -197,7 +191,6 @@ function Index() {
                   label={c.name}
                   active={activeCat === c.id}
                   onClick={() => setActiveCat(c.id)}
-                  onDoubleClickHref={c.slug}
                   href={c.slug}
                 />
               ))}
@@ -258,7 +251,6 @@ function CategoryCard({
   active: boolean;
   onClick: () => void;
   href?: string;
-  onDoubleClickHref?: string;
 }) {
   const base =
     "group flex aspect-[4/5] flex-col items-center justify-center gap-3 rounded-xl border bg-white px-3 py-5 text-center shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all sm:aspect-square";
@@ -269,29 +261,22 @@ function CategoryCard({
     "h-10 w-10 sm:h-12 sm:w-12 " + (active ? "text-accent" : "text-primary");
   const labelCls =
     "line-clamp-2 text-xs sm:text-sm font-medium text-slate-700 group-hover:text-primary";
-  if (href) {
-    return (
-      <Link
-        to="/category/$slug"
-        params={{ slug: href }}
-        className={base + " " + state}
-        onClick={(e) => {
-          if (e.shiftKey) {
-            e.preventDefault();
-            onClick();
-          }
-        }}
-      >
+  return (
+    <div className="relative">
+      <button onClick={onClick} className={base + " " + state + " w-full"}>
         <Icon className={iconCls} strokeWidth={1.5} />
         <span className={labelCls}>{label}</span>
-      </Link>
-    );
-  }
-  return (
-    <button onClick={onClick} className={base + " " + state}>
-      <Icon className={iconCls} strokeWidth={1.5} />
-      <span className={labelCls}>{label}</span>
-    </button>
+      </button>
+      {href && (
+        <Link
+          to="/category/$slug"
+          params={{ slug: href }}
+          className="absolute bottom-1 right-1 text-[10px] text-muted-foreground opacity-0 transition-opacity hover:text-primary group-hover:opacity-100"
+        >
+          View all →
+        </Link>
+      )}
+    </div>
   );
 }
 

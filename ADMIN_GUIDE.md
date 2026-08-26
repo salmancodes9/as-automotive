@@ -97,7 +97,7 @@ Installation: Professional fitting recommended."
 **Automatic Optimization:**
 
 - Supabase CDN automatically caches images
-- Signed URLs stay valid for 10 years
+- Public URLs are permanent (no expiration)
 - Images cached globally for fast delivery
 
 ---
@@ -189,7 +189,7 @@ A: 1 main image + 3 extra gallery images = 4 total maximum
 A: Yes, categories can be deleted (products stay but lose category)
 
 **Q: How long do image URLs last?**
-A: 10 years - you don't need to re-upload
+A: Permanent — public URLs don't expire
 
 **Q: Can I upload via URL instead of uploading?**
 A: Yes, paste any public image URL in the Image URL field

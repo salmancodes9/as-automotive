@@ -1,24 +1,23 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useLoaderData } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
+import { getPublicCategoryBySlug, getPublicAccessoriesByCategory } from "@/lib/public.functions";
+import { SITE_URL } from "@/lib/contact";
 
 export const Route = createFileRoute("/category/$slug")({
   loader: async ({ params }) => {
-    const { data } = await supabase
-      .from("categories")
-      .select("name,slug")
-      .eq("slug", params.slug)
-      .maybeSingle();
-    return { category: data as { name: string; slug: string } | null };
+    const fn = getPublicCategoryBySlug;
+    const category = await fn({ data: { slug: params.slug } });
+    return { category };
   },
-  head: ({ params, loaderData }) => {
-    const name = loaderData?.category?.name ?? "Maruti Suzuki Parts";
+  head: ({ loaderData }) => {
+    const name = loaderData?.category?.name ?? "Category";
     const title = `${name} - Genuine Maruti Suzuki ${name} in Srinagar | AS Automobiles`;
-    const description = `Buy genuine Maruti Suzuki ${name.toLowerCase()} in Tengpora, Srinagar. OEM quality parts from AS Automobiles - quick WhatsApp inquiries and trusted service.`;
-    const url = `https://as-automotive.lovable.app/category/${params.slug}`;
+    const description = `Buy genuine Maruti Suzuki ${name.toLowerCase()} in Tengpora, Srinagar. OEM quality parts from AS Automobiles with WhatsApp inquiries and trusted service.`;
+    const url = `${SITE_URL}/category/${loaderData?.category?.slug ?? ""}`;
     return {
       meta: [
         { title },
@@ -57,17 +56,15 @@ type Accessory = {
 
 function CategoryPage() {
   const { slug } = Route.useParams();
+  const { category: loaderCategory } = useLoaderData({ from: "/category/$slug" });
+  const fetchCategory = useServerFn(getPublicCategoryBySlug);
+  const fetchItems = useServerFn(getPublicAccessoriesByCategory);
 
   const { data: category, isLoading: catLoading } = useQuery({
     queryKey: ["category", slug],
+    initialData: loaderCategory as Category | null,
     queryFn: async (): Promise<Category | null> => {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("id,name,slug")
-        .eq("slug", slug)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
+      return await fetchCategory({ data: { slug } });
     },
   });
 
@@ -75,13 +72,7 @@ function CategoryPage() {
     queryKey: ["category-items", category?.id],
     enabled: !!category?.id,
     queryFn: async (): Promise<Accessory[]> => {
-      const { data, error } = await supabase
-        .from("accessories")
-        .select("id,name,price,image_url,is_trending,is_oem")
-        .eq("category_id", category!.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Accessory[];
+      return await fetchItems({ data: { categoryId: category!.id } });
     },
   });
 
@@ -91,9 +82,11 @@ function CategoryPage() {
     <div className="min-h-screen bg-background text-foreground">
       <Header />
       <main className="mx-auto max-w-5xl px-5 py-6">
-        <Link to="/" className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary">
-          <ArrowLeft className="h-3.5 w-3.5" /> Back
-        </Link>
+        <nav className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Link to="/" className="hover:text-primary">Home</Link>
+          <span>/</span>
+          <span className="text-foreground font-medium">{category?.name ?? "Category"}</span>
+        </nav>
         <h1 className="mt-3 text-2xl font-bold text-foreground">
           {category?.name ?? "Category"}
         </h1>

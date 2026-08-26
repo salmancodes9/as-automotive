@@ -1,9 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type {} from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import { getPublicAccessoryForSitemap } from "@/lib/public.functions";
+import { SITE_URL } from "@/lib/contact";
 
-const BASE_URL = "https://as-automotive.lovable.app";
+const BASE_URL = SITE_URL;
 
 interface SitemapEntry {
   path: string;
@@ -21,21 +20,11 @@ export const Route = createFileRoute("/sitemap.xml")({
         ];
 
         try {
-          const supabase = createClient<Database>(
-            process.env.SUPABASE_URL!,
-            process.env.SUPABASE_PUBLISHABLE_KEY!,
-            { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-          );
-          const { data: categories } = await supabase
-            .from("categories")
-            .select("slug");
-          for (const c of categories ?? []) {
+          const { categories, products } = await getPublicAccessoryForSitemap();
+          for (const c of categories) {
             entries.push({ path: `/category/${c.slug}`, changefreq: "weekly", priority: "0.8" });
           }
-          const { data: products } = await supabase
-            .from("accessories")
-            .select("id,created_at");
-          for (const p of products ?? []) {
+          for (const p of products) {
             entries.push({
               path: `/product/${p.id}`,
               lastmod: p.created_at?.slice(0, 10),

@@ -6,6 +6,44 @@ function checkPasscode(passcode: string) {
   if (passcode !== expected) throw new Error("Invalid passcode.");
 }
  
+export const getAdminCategories = createServerFn({ method: "GET" })
+  .inputValidator((input: { passcode: string }) => input)
+  .handler(async ({ data }) => {
+    checkPasscode(data.passcode);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("categories")
+      .select("id,name,slug,sort_order,created_at")
+      .order("sort_order")
+      .order("name");
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const getAdminAccessories = createServerFn({ method: "GET" })
+  .inputValidator((input: { passcode: string }) => input)
+  .handler(async ({ data }) => {
+    checkPasscode(data.passcode);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("accessories")
+      .select("id,name,description,price,image_url,category_id,is_trending,is_oem,images,created_at")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as {
+      id: string;
+      name: string;
+      description: string | null;
+      price: number | null;
+      image_url: string | null;
+      category_id: string | null;
+      is_trending: boolean;
+      is_oem: boolean;
+      images: string[];
+      created_at: string;
+    }[];
+  });
+
 export const verifyPasscode = createServerFn({ method: "POST" })
   .inputValidator((input: { passcode: string }) => input)
   .handler(async ({ data }) => {
