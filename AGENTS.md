@@ -8,7 +8,7 @@
 
 ## Stack
 
-- **Framework**: TanStack Start (file-based routing) on Vite 8, deployed to Cloudflare Workers (Nitro preset)
+- **Framework**: TanStack Start (file-based routing) on Vite 8, deployed to Cloudflare Workers (via @cloudflare/vite-plugin)
 - **UI**: shadcn/ui (new-york style) + Tailwind CSS 4 + Lucide icons
 - **Backend**: Supabase — PostgreSQL, auth, storage (`product-images` bucket, public)
 - **React**: v19, TanStack React Query, react-hook-form + zod
@@ -82,7 +82,7 @@ ADMIN_PASSCODE=your-secret-passcode
 - Upload a test image — should see it appear in the product list
 - Visit `/` — should see categories and products (empty at first)
 
-## Deployment (Cloudflare Pages)
+## Deployment (Cloudflare Workers)
 
 ### Prerequisites
 1. [Cloudflare account](https://dash.cloudflare.com) (free tier works)
@@ -90,23 +90,20 @@ ADMIN_PASSCODE=your-secret-passcode
 
 ### First-time setup
 
-#### 1. Create Cloudflare Pages project
-Go to [Cloudflare Dashboard](https://dash.cloudflare.com) → Workers & Pages → Create → Pages → Connect to Git → select your repo.
+#### 1. Set environment variables in Cloudflare Workers
+Go to Cloudflare Dashboard → Workers & Pages → `as-automotive` → Settings → Variables, add:
 
-#### 2. Set environment variables in Cloudflare
-In the Pages project → Settings → Environment variables, add:
+| Variable | Value |
+|----------|-------|
+| `SUPABASE_URL` | `https://your-ref.supabase.co` |
+| `SUPABASE_PUBLISHABLE_KEY` | Your JWT anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Your JWT service role key |
+| `VITE_SUPABASE_URL` | Same as SUPABASE_URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Same as SUPABASE_PUBLISHABLE_KEY |
+| `ADMIN_PASSCODE` | Your admin passcode |
+| `SITE_URL` | `https://asautomotive.app` |
 
-| Variable | Value | Environment |
-|----------|-------|-------------|
-| `SUPABASE_URL` | `https://your-ref.supabase.co` | Production + Preview |
-| `SUPABASE_PUBLISHABLE_KEY` | Your JWT anon key | Production + Preview |
-| `SUPABASE_SERVICE_ROLE_KEY` | Your JWT service role key | Production only |
-| `VITE_SUPABASE_URL` | Same as SUPABASE_URL | Production + Preview |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Same as SUPABASE_PUBLISHABLE_KEY | Production + Preview |
-| `ADMIN_PASSCODE` | Your admin passcode | Production + Preview |
-| `SITE_URL` | `https://asautomotive.app` | Production |
-
-#### 3. Set GitHub Actions secrets
+#### 2. Set GitHub Actions secrets
 In your GitHub repo → Settings → Secrets and variables → Actions, add:
 
 | Secret | Value |
@@ -121,15 +118,15 @@ In your GitHub repo → Settings → Secrets and variables → Actions, add:
 | `ADMIN_PASSCODE` | Your admin passcode |
 | `SITE_URL` | `https://asautomotive.app` |
 
-#### 4. Deploy
-Push to `main` branch → GitHub Actions runs lint + build → deploys to Cloudflare Pages automatically.
+#### 3. Deploy
+Push to `main` branch → GitHub Actions runs lint + build → deploys to Cloudflare Workers automatically.
 
 ### Custom domain (asautomotive.app)
 1. Claim your free `.app` domain at [Namecheap Education](https://www.namecheap.com/education/) using GitHub Student Developer Pack
-2. In Cloudflare Pages project → Custom domains → Add custom domain → enter `asautomotive.app`
-3. Cloudflare provides 2 CNAME records — add them in Namecheap's DNS settings
+2. In Cloudflare Workers project → Settings → Triggers → Custom domains → Add custom domain → enter `asautomotive.app`
+3. Cloudflare provides DNS records — add them in Namecheap's DNS settings
 4. SSL certificate is auto-provisioned (usually within minutes)
-5. Update `SITE_URL` env var in Cloudflare Pages to `https://asautomotive.app`
+5. Update `SITE_URL` env var in Cloudflare Workers to `https://asautomotive.app`
 
 ### Manual deploy (alternative)
 ```bash
@@ -139,8 +136,8 @@ bunx wrangler login
 # Build
 bun run build
 
-# Deploy to Pages
-bunx wrangler pages deploy .output/public --project-name=as-automotive
+# Deploy to Workers
+bun run deploy
 ```
 
 ### .env reference
