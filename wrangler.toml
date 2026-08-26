@@ -4,10 +4,10 @@ compatibility_flags = ["nodejs_compat"]
 main = ".output/server/index.mjs"
 
 [vars]
-SITE_URL = "https://as-automotive.pages.dev"
+SITE_URL = "https://asautomotive.app"
 
 [env.production]
-vars = { SITE_URL = "https://as-automotive.pages.dev" }
+vars = { SITE_URL = "https://asautomotive.app" }
 
 [env.preview]
-vars = { SITE_URL = "https://preview.as-automotive.pages.dev" }
+vars = { SITE_URL = "https://as-automotive.pages.dev" }

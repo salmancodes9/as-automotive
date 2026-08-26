@@ -153,6 +153,7 @@ function AdminDashboard({ passcode, onLogout }: { passcode: string; onLogout: ()
 
   const addCat = useServerFn(createCategory);
   const delCat = useServerFn(deleteCategory);
+  const upImg = useServerFn(uploadProductImage);
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["admin-categories"] });

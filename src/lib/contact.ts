@@ -1,6 +1,6 @@
 export const SITE_URL =
   (typeof window !== "undefined" ? window.location.origin : process.env.SITE_URL) ||
-  "https://as-automotive.vercel.app";
+  "https://asautomotive.app";
 
 export const OWNER_PHONE_DISPLAY = "+91 60055 63521";
 export const OWNER_PHONE_TEL = "+916005563521";

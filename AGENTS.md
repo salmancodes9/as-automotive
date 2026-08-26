@@ -104,7 +104,7 @@ In the Pages project → Settings → Environment variables, add:
 | `VITE_SUPABASE_URL` | Same as SUPABASE_URL | Production + Preview |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Same as SUPABASE_PUBLISHABLE_KEY | Production + Preview |
 | `ADMIN_PASSCODE` | Your admin passcode | Production + Preview |
-| `SITE_URL` | `https://your-project.pages.dev` | Production |
+| `SITE_URL` | `https://asautomotive.app` | Production |
 
 #### 3. Set GitHub Actions secrets
 In your GitHub repo → Settings → Secrets and variables → Actions, add:
@@ -119,16 +119,17 @@ In your GitHub repo → Settings → Secrets and variables → Actions, add:
 | `SUPABASE_PUBLISHABLE_KEY` | Your Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase service role key |
 | `ADMIN_PASSCODE` | Your admin passcode |
-| `SITE_URL` | `https://your-project.pages.dev` |
+| `SITE_URL` | `https://asautomotive.app` |
 
 #### 4. Deploy
 Push to `main` branch → GitHub Actions runs lint + build → deploys to Cloudflare Pages automatically.
 
-### Custom domain
-1. In Cloudflare Pages project → Custom domains → Add custom domain
-2. Enter your domain (e.g. `asautomobiles.com`)
-3. Cloudflare provides DNS records — add them to your domain registrar
+### Custom domain (asautomotive.app)
+1. Claim your free `.app` domain at [Namecheap Education](https://www.namecheap.com/education/) using GitHub Student Developer Pack
+2. In Cloudflare Pages project → Custom domains → Add custom domain → enter `asautomotive.app`
+3. Cloudflare provides 2 CNAME records — add them in Namecheap's DNS settings
 4. SSL certificate is auto-provisioned (usually within minutes)
+5. Update `SITE_URL` env var in Cloudflare Pages to `https://asautomotive.app`
 
 ### Manual deploy (alternative)
 ```bash
@@ -150,5 +151,5 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 VITE_SUPABASE_URL=https://your-ref.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=eyJ...
 ADMIN_PASSCODE=your-secret-passcode
-SITE_URL=https://your-project.pages.dev
+SITE_URL=https://asautomotive.app
 ```
