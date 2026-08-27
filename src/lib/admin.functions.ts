@@ -1,13 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getEnvVar } from "@/lib/env";
 
 function checkPasscode(passcode: string) {
-  const workerEnv = (globalThis as Record<string, unknown>).__WORKER_ENV;
-  const workerEnvType = typeof workerEnv;
-  const workerEnvKeys = workerEnv && typeof workerEnv === "object" ? Object.keys(workerEnv as Record<string, unknown>) : [];
-  const expected = getEnvVar("ADMIN_PASSCODE");
-  console.log(`[AUTH DEBUG] __WORKER_ENV type=${workerEnvType} keys=[${workerEnvKeys.join(",")}] expected=${expected ? "(set)" : "(missing)"} passcode_len=${passcode.length}`);
-  if (!expected) throw new Error(`Admin passcode is not configured on the server. (workerEnvType=${workerEnvType}, keys=[${workerEnvKeys.join(",")}])`);
+  const expected = process.env.ADMIN_PASSCODE;
+  if (!expected) throw new Error("Admin passcode is not configured on the server.");
   if (passcode !== expected) throw new Error("Invalid passcode.");
 }
  

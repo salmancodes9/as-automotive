@@ -38,16 +38,7 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 }
 
 export default {
-  async fetch(request: Request, env: Record<string, unknown>, ctx: unknown) {
-    // Expose Cloudflare Worker env bindings to a global key the bundler cannot touch.
-    if (env && typeof env === "object") {
-      const keys = Object.keys(env as Record<string, unknown>);
-      console.log(`[SERVER DEBUG] env keys=[${keys.join(",")}]`);
-      (globalThis as Record<string, unknown>).__WORKER_ENV = env;
-    } else {
-      console.log(`[SERVER DEBUG] env is empty or not object: ${typeof env}`);
-    }
-
+  async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
