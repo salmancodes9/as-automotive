@@ -39,15 +39,11 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: Record<string, unknown>, ctx: unknown) {
-    // Expose Cloudflare Worker env bindings to process.env for server functions.
-    // @cloudflare/vite-plugin replaces process.env.* at build time, but secrets
-    // only exist at runtime. This bridge makes runtime secrets accessible.
+    // Expose Cloudflare Worker env bindings to a global key the bundler cannot touch.
+    // @cloudflare/vite-plugin replaces process.env.* at build time, so even setting
+    // process.env at runtime is too late — the baked-in code already says undefined.
     if (env && typeof env === "object") {
-      for (const [key, value] of Object.entries(env)) {
-        if (typeof value === "string") {
-          process.env[key] = value;
-        }
-      }
+      (globalThis as Record<string, unknown>).__WORKER_ENV = env;
     }
 
     try {
