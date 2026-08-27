@@ -4,14 +4,5 @@
   "compatibility_date": "2024-11-01",
   "compatibility_flags": ["nodejs_compat"],
   "main": "@tanstack/react-start/server-entry",
-  "observability": { "enabled": true },
-  "vars": {
-    "SUPABASE_URL": "https://mlfgreessibnfyoatsmg.supabase.co",
-    "SUPABASE_PUBLISHABLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sZmdyZWVzc2libmZ5b2F0c21nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NTQxOTMsImV4cCI6MjEwMzMzMDE5M30.xpxveFvC5-mT2dxhQ6qa9MotYKwMTFEMk3BjazT-CqY",
-    "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sZmdyZWVzc2libmZ5b2F0c21nIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Nzc1NDE5MywiZXhwIjoyMTAzMzMwMTkzfQ.UXWaclbazhJWJD-1vyYFVGBZlIW-6SR5rbqBmmOY18E",
-    "VITE_SUPABASE_URL": "https://mlfgreessibnfyoatsmg.supabase.co",
-    "VITE_SUPABASE_PUBLISHABLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sZmdyZWVzc2libmZ5b2F0c21nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NTQxOTMsImV4cCI6MjEwMzMzMDE5M30.xpxveFvC5-mT2dxhQ6qa9MotYKwMTFEMk3BjazT-CqY",
-    "ADMIN_PASSCODE": "adminishere",
-    "SITE_URL": "https://asautomotive.app"
-  }
+  "observability": { "enabled": true }
 }

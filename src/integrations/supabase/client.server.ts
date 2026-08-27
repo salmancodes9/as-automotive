@@ -4,12 +4,14 @@
 // For user-authenticated queries (with RLS), use the auth middleware instead.
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
+import { env } from 'cloudflare:workers';
 
 function createSupabaseAdminClient() {
   // .trim() guards against a common deploy mistake: pasting env vars with a
   // trailing newline or space in the hosting dashboard.
-  const SUPABASE_URL = process.env.SUPABASE_URL?.trim();
-  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const bindings = env as Record<string, string>;
+  const SUPABASE_URL = bindings.SUPABASE_URL?.trim();
+  const SUPABASE_SERVICE_ROLE_KEY = bindings.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     const missing = [

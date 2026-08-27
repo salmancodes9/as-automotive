@@ -3,14 +3,16 @@ import { createMiddleware } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './types'
+import { env } from 'cloudflare:workers'
 
 
 
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
     
-    const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+    const bindings = env as Record<string, string>;
+    const SUPABASE_URL = bindings.SUPABASE_URL;
+    const SUPABASE_PUBLISHABLE_KEY = bindings.SUPABASE_PUBLISHABLE_KEY;
 
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
       const missing = [

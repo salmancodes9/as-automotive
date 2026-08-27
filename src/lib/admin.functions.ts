@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import { env } from "cloudflare:workers";
 
 function checkPasscode(passcode: string) {
-  const expected = process.env.ADMIN_PASSCODE;
+  const expected = (env as Record<string, string>).ADMIN_PASSCODE;
   if (!expected) throw new Error("Admin passcode is not configured on the server.");
   if (passcode !== expected) throw new Error("Invalid passcode.");
 }
