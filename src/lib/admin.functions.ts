@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
  
 function checkPasscode(passcode: string) {
-  const expected = process.env.ADMIN_PASSCODE;
+  // Use a variable reference to prevent @cloudflare/vite-plugin from inlining at build time.
+  const env = process.env;
+  const expected = env.ADMIN_PASSCODE;
   if (!expected) throw new Error("Admin passcode is not configured on the server.");
   if (passcode !== expected) throw new Error("Invalid passcode.");
 }
