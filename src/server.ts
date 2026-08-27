@@ -40,10 +40,12 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: Record<string, unknown>, ctx: unknown) {
     // Expose Cloudflare Worker env bindings to a global key the bundler cannot touch.
-    // @cloudflare/vite-plugin replaces process.env.* at build time, so even setting
-    // process.env at runtime is too late — the baked-in code already says undefined.
     if (env && typeof env === "object") {
+      const keys = Object.keys(env as Record<string, unknown>);
+      console.log(`[SERVER DEBUG] env keys=[${keys.join(",")}]`);
       (globalThis as Record<string, unknown>).__WORKER_ENV = env;
+    } else {
+      console.log(`[SERVER DEBUG] env is empty or not object: ${typeof env}`);
     }
 
     try {
